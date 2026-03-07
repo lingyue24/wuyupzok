@@ -1,3 +1,4 @@
+// 初始資料
 let db = JSON.parse(localStorage.getItem("v6_knowledge_db")) || {
     config: { dbName: "我的企業知識庫", password: "1234" },
     categories: [{ name: "💊 產品百科", children: [], items: [] }]
@@ -10,10 +11,11 @@ let isAdmin = false;
 
 const save = () => localStorage.setItem("v6_knowledge_db", JSON.stringify(db));
 
+// ---------------- 選單控制 ----------------
 function toggleMenu() { document.getElementById("sidebar").classList.toggle("open"); }
 function closeMenu() { document.getElementById("sidebar").classList.remove("open"); }
 
-// --- 圖片處理 ---
+// ---------------- 圖片管理 ----------------
 function addLocalImg(input) {
     if (tempImgs.length >= 5) return alert("最多 5 張圖片");
     const file = input.files[0];
@@ -37,9 +39,9 @@ function renderImgManager() {
         </div>`).join("");
 }
 
-// --- 核心儲存邏輯 ---
+// ---------------- 內容儲存與編輯 ----------------
 function saveContent() {
-    if (!activeNode) return alert("請先從左側選單選取分類路徑");
+    if (!activeNode) return alert("請先選取分類路徑");
     const name = document.getElementById("edit-title").value.trim();
     const text = document.getElementById("edit-desc").value.trim();
     if (!name) return alert("標題不能為空");
@@ -54,10 +56,31 @@ function saveContent() {
     }
 
     save();
-    alert("✅ 資料已儲存"); // 需求修正
+    alert("✅ 資料已儲存");
     renderDisplay(activeNode.items);
-    exitEdit(); // 返回顯示頁面，清空編輯區
+    exitEdit(); // 自動返回內容頁
     document.getElementById("content").scrollTop = 0;
+}
+
+function startEdit(idx) {
+    editingIdx = idx;
+    const item = activeNode.items[idx];
+    document.getElementById("edit-title").value = item.name;
+    document.getElementById("edit-desc").value = item.text;
+    tempImgs = [...(item.imgs || [])];
+    renderImgManager();
+    document.getElementById("btn-save-main").innerText = "🆙 更新內容";
+    document.getElementById("btn-cancel-edit").style.display = "block";
+    document.getElementById("admin-panel").scrollIntoView({ behavior: 'smooth' });
+}
+
+// 新增功能：刪除內容條目
+function deleteItem(idx) {
+    if (confirm("確定要刪除這筆內容嗎？")) {
+        activeNode.items.splice(idx, 1);
+        save();
+        renderDisplay(activeNode.items);
+    }
 }
 
 function exitEdit() {
@@ -70,7 +93,7 @@ function exitEdit() {
     document.getElementById("btn-cancel-edit").style.display = "none";
 }
 
-// --- 分類編輯功能修正 ---
+// ---------------- 分類管理功能 ----------------
 function addCategory() {
     if (!activeNode) return alert("請先選取一個分類");
     const name = prompt("請輸入新分類名稱：");
@@ -84,7 +107,7 @@ function addCategory() {
 
 function renameCategory() {
     if (!activeNode) return alert("請先選取一個分類");
-    const name = prompt("請輸入新的分類名稱：", activeNode.name);
+    const name = prompt("請輸入新的名稱：", activeNode.name);
     if (name) {
         activeNode.name = name;
         save();
@@ -95,14 +118,14 @@ function renameCategory() {
 
 function deleteCategory() {
     if (!activeNode) return;
-    if (confirm(`確定要刪除「${activeNode.name}」及其內容嗎？`)) {
-        const findAndRemove = (parentArr) => {
-            const idx = parentArr.findIndex(n => n === activeNode);
-            if (idx > -1) { parentArr.splice(idx, 1); return true; }
-            for (let child of parentArr) { if (child.children && findAndRemove(child.children)) return true; }
+    if (confirm(`確定要刪除「${activeNode.name}」及其所有子項嗎？`)) {
+        const removeNode = (arr) => {
+            const i = arr.findIndex(n => n === activeNode);
+            if (i > -1) { arr.splice(i, 1); return true; }
+            for (let c of arr) { if (c.children && removeNode(c.children)) return true; }
             return false;
         };
-        findAndRemove(db.categories);
+        removeNode(db.categories);
         activeNode = null;
         save();
         renderTree(db.categories, document.getElementById("nav-tree"));
@@ -110,7 +133,7 @@ function deleteCategory() {
     }
 }
 
-// --- 選單與顯示 ---
+// ---------------- 選單與顯示渲染 ----------------
 function renderTree(nodes, container) {
     container.innerHTML = "";
     nodes.forEach((node) => {
@@ -134,7 +157,7 @@ function renderTree(nodes, container) {
                 childrenBox.style.display = childrenBox.style.display === "none" ? "block" : "none";
             } else {
                 renderDisplay(node.items || []);
-                if (window.innerWidth <= 1024) closeMenu();
+                if (window.innerWidth <= 1024) closeMenu(); // 手機版選取後收合
             }
         };
 
@@ -154,25 +177,19 @@ function renderDisplay(items) {
         <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                 <h2 style="margin:0 0 10px 0; color:var(--primary);">${item.name}</h2>
-                ${isAdmin ? `<button class="btn btn-outline" onclick="startEdit(${idx})">✏</button>` : ''}
+                ${isAdmin ? `
+                    <div class="btn-group-row">
+                        <button class="btn btn-outline" onclick="startEdit(${idx})" title="編輯">✏</button>
+                        <button class="btn btn-danger" onclick="deleteItem(${idx})" style="padding: 5px 12px;" title="刪除">🗑</button>
+                    </div>
+                ` : ''}
             </div>
             <div class="gallery">${(item.imgs || []).map(src => `<img class="gallery-img" src="${src}" onclick="window.open('${src}')">`).join('')}</div>
             <p style="white-space: pre-wrap; line-height:1.6;">${item.text}</p>
         </div>`).join("");
 }
 
-function startEdit(idx) {
-    editingIdx = idx;
-    const item = activeNode.items[idx];
-    document.getElementById("edit-title").value = item.name;
-    document.getElementById("edit-desc").value = item.text;
-    tempImgs = [...(item.imgs || [])];
-    renderImgManager();
-    document.getElementById("btn-save-main").innerText = "🆙 更新內容";
-    document.getElementById("btn-cancel-edit").style.display = "block";
-    document.getElementById("admin-panel").scrollIntoView({ behavior: 'smooth' });
-}
-
+// ---------------- 管理與搜尋 ----------------
 function toggleAdmin() {
     const pw = prompt("請輸入管理密碼:");
     if (pw === db.config.password) {
@@ -180,7 +197,7 @@ function toggleAdmin() {
         document.getElementById("admin-panel").style.display = "block";
         document.getElementById("btn-settings").style.display = "block";
         document.getElementById("admin-toggle").innerText = "✅ 管理模式中";
-        if(activeNode) renderDisplay(activeNode.items);
+        if (activeNode) renderDisplay(activeNode.items);
     }
 }
 
@@ -196,10 +213,29 @@ function smartSearch() {
     renderDisplay(res);
 }
 
+// 初始化
 window.onload = () => {
     document.getElementById("db-name-display").innerText = db.config.dbName;
     renderTree(db.categories, document.getElementById("nav-tree"));
 };
 
+// 彈窗
 function openModal() { document.getElementById("settings-modal").style.display = "flex"; }
 function closeModal() { document.getElementById("settings-modal").style.display = "none"; }
+
+// 設定
+function saveSettings() {
+    const n = document.getElementById("set-db-name").value;
+    const p = document.getElementById("set-new-pw").value;
+    if (n) db.config.dbName = n;
+    if (p) db.config.password = p;
+    save();
+    location.reload();
+}
+
+function exportDB() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db));
+    const a = document.createElement('a');
+    a.href = dataStr; a.download = db.config.dbName + ".json";
+    a.click();
+}
