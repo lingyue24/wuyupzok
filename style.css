@@ -21,21 +21,15 @@ body { font-family: 'Segoe UI', "Microsoft JhengHei", sans-serif; margin: 0; dis
 .active-node { background: var(--accent) !important; font-weight: bold; }
 .child-container { margin-left: 15px; border-left: 1px dashed rgba(255,255,255,0.2); }
 
-/* Header */
+/* Main Container */
+#main-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 header { background: white; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 10; flex-shrink: 0; }
 #search-bar { width: 300px; padding: 8px 15px; border-radius: 20px; border: 1px solid #ddd; outline: none; }
 
-/* Main Content */
-#main-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 #content { flex: 1; padding: 20px; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 50px; }
-.card { background: white; border-radius: 10px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; border: 2px solid transparent; }
+.card { background: white; border-radius: 10px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
 
-/* Editor Form */
-.editor-form { display: flex; flex-direction: column; gap: 15px; }
-.editor-form label { font-weight: bold; color: var(--primary); }
-.editor-form input, .editor-form textarea { padding: 12px; border: 1px solid #ccc; border-radius: 6px; width: 100%; box-sizing: border-box; font-size: 16px; }
-
-/* Mobile logic */
+/* UI for Mobile */
 #sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1500; }
 .mobile-only { display: none; background: none; border: none; font-size: 24px; cursor: pointer; }
 
@@ -47,6 +41,11 @@ header { background: white; padding: 12px 20px; display: flex; align-items: cent
     #search-bar { width: 150px; }
 }
 
+/* Editor & Forms */
+.editor-form { display: flex; flex-direction: column; gap: 15px; }
+.editor-form label { font-weight: bold; color: var(--primary); }
+.editor-form input, .editor-form textarea { padding: 12px; border: 1px solid #ccc; border-radius: 6px; width: 100%; box-sizing: border-box; font-size: 16px; }
+
 /* Image Manager */
 .img-manager { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; margin-top: 15px; }
 .img-slot { position: relative; border: 1px solid #ddd; border-radius: 6px; height: 80px; background: #eee; overflow: hidden; }
@@ -57,10 +56,12 @@ header { background: white; padding: 12px 20px; display: flex; align-items: cent
 .gallery { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
 .gallery-img { height: 140px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
 
+/* Buttons */
 .btn-group-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .btn { border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold; }
 .btn-save { background: var(--success); color: white; width: 100%; }
 .btn-accent { background: var(--accent); color: white; }
+.btn-danger { background: var(--danger); color: white; }
 .btn-outline { background: #eee; color: #333; }
 
 .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 3000; justify-content: center; align-items: center; }

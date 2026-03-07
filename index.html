@@ -31,7 +31,7 @@
         <div id="display-view"></div>
 
         <div id="admin-panel" style="display:none;" class="card">
-            <h3 style="margin-top:0;">📂 編輯內容管理</h3>
+            <h3 style="margin-top:0;">📂 分類與內容管理</h3>
             <div id="current-path">📍 請選取左側選單路徑</div>
             
             <div class="btn-group-row">
@@ -39,6 +39,8 @@
                 <button class="btn btn-outline" onclick="renameCategory()">✏ 分類改名</button>
                 <button class="btn btn-danger" onclick="deleteCategory()">🗑 刪除分類</button>
             </div>
+
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
 
             <div class="editor-form">
                 <label>📌 內容標題</label>
@@ -72,9 +74,9 @@
         <div class="editor-form">
             <label>資料庫顯示名稱</label>
             <input type="text" id="set-db-name">
-            <label>修改管理密碼</label>
+            <label>管理密碼</label>
             <input type="password" id="set-new-pw" placeholder="輸入新密碼">
-            <button class="btn btn-save" onclick="saveSettings()">更新系統設定</button>
+            <button class="btn btn-save" onclick="saveSettings()">更新設定</button>
             <div class="btn-group-row" style="margin-top:15px;">
                 <button class="btn btn-outline" onclick="exportDB()" style="flex:1">📦 備份匯出</button>
                 <button class="btn btn-outline" onclick="document.getElementById('import-f').click()" style="flex:1">📥 匯入</button>
