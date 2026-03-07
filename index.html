@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V6.9 旗艦知識管理系統</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="sidebar">
+    <div class="sidebar-header">
+        <span id="db-name-display">載入中...</span>
+        <button id="admin-toggle" onclick="toggleAdmin()">🔐 管理模式</button>
+    </div>
+    <div id="nav-tree"></div>
+</div>
+
+<div id="main-container">
+    <header>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <button onclick="document.getElementById('sidebar').classList.toggle('open')" class="mobile-only">☰</button>
+            <input type="text" id="search-bar" placeholder="🔍 搜尋標題或內容..." oninput="smartSearch()">
+        </div>
+        <button id="btn-settings" onclick="openModal()" style="display:none;">⚙ 系統設定</button>
+    </header>
+
+    <main id="content">
+        <div id="display-view"></div>
+
+        <div id="admin-panel" style="display:none;" class="card">
+            <h3 style="margin-top:0;">📂 編輯內容管理</h3>
+            <div id="current-path">📍 請選取左側選單路徑</div>
+            
+            <div class="btn-group-row">
+                <button class="btn btn-accent" onclick="addCategory()">➕ 新子分類</button>
+                <button class="btn btn-outline" onclick="renameCategory()">✏ 分類改名</button>
+                <button class="btn btn-danger" onclick="deleteCategory()">🗑 刪除分類</button>
+            </div>
+
+            <div class="editor-form">
+                <label>📌 內容標題</label>
+                <input type="text" id="edit-title" placeholder="請輸入標題...">
+                
+                <label>📝 詳細描述</label>
+                <textarea id="edit-desc" placeholder="請輸入詳細內容說明..."></textarea>
+                
+                <label>🖼 圖片管理 (最多5張，支援本地與網址)</label>
+                <div class="image-input-area">
+                    <input type="file" id="input-file" accept="image/*" onchange="addLocalImg(this)">
+                    <div class="url-input-group">
+                        <input type="text" id="input-url" placeholder="輸入圖片網址(如 pic/1.jpg)...">
+                        <button onclick="addUrlImg()">新增</button>
+                    </div>
+                </div>
+                <div id="img-manager-zone" class="img-manager"></div>
+                
+                <div class="btn-group-row" style="margin-top:20px;">
+                    <button id="btn-save-main" class="btn btn-save" onclick="saveContent()">💾 儲存內容</button>
+                    <button id="btn-cancel-edit" class="btn btn-outline" onclick="exitEdit()" style="display:none;">取消編輯</button>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div id="settings-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>🛠 系統進階設定</h3>
+        <div class="editor-form">
+            <label>資料庫顯示名稱</label>
+            <input type="text" id="set-db-name">
+            
+            <label>修改管理密碼 (留空代表不修改)</label>
+            <input type="password" id="set-new-pw" placeholder="輸入新密碼">
+            
+            <button class="btn btn-save" onclick="saveSettings()">更新系統設定</button>
+            
+            <div class="btn-group-row" style="margin-top:15px;">
+                <button class="btn btn-outline" onclick="exportDB()" style="flex:1">📦 資料備份匯出</button>
+                <button class="btn btn-outline" onclick="document.getElementById('import-f').click()" style="flex:1">📥 資料匯入</button>
+            </div>
+            <input type="file" id="import-f" hidden onchange="importDB(this)">
+            <button class="btn btn-outline" style="width:100%; margin-top:10px;" onclick="closeModal()">關閉視窗</button>
+        </div>
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
