@@ -8,21 +8,10 @@ let tempImgs = [];
 let editingIdx = -1;
 let isAdmin = false;
 
-function save() { localStorage.setItem("v6_knowledge_db", JSON.stringify(db)); }
+const save = () => localStorage.setItem("v6_knowledge_db", JSON.stringify(db));
 
-function updateUIConfigs() {
-    document.getElementById("db-name-display").innerText = db.config.dbName;
-    document.title = db.config.dbName;
-}
-
-// --- 選單控制邏輯 ---
-function openMenu() {
-    document.getElementById("sidebar").classList.add("open");
-}
-
-function closeMenu() {
-    document.getElementById("sidebar").classList.remove("open");
-}
+function toggleMenu() { document.getElementById("sidebar").classList.toggle("open"); }
+function closeMenu() { document.getElementById("sidebar").classList.remove("open"); }
 
 // --- 圖片處理 ---
 function addLocalImg(input) {
@@ -48,9 +37,9 @@ function renderImgManager() {
         </div>`).join("");
 }
 
-// --- 內容儲存與返回 ---
+// --- 核心儲存邏輯 ---
 function saveContent() {
-    if (!activeNode) return alert("請先選取分類！");
+    if (!activeNode) return alert("請先從左側選單選取分類路徑");
     const name = document.getElementById("edit-title").value.trim();
     const text = document.getElementById("edit-desc").value.trim();
     if (!name) return alert("標題不能為空");
@@ -65,9 +54,9 @@ function saveContent() {
     }
 
     save();
-    alert("✅ 資料已儲存"); // 修正點：彈窗確認
+    alert("✅ 資料已儲存"); // 需求修正
     renderDisplay(activeNode.items);
-    exitEdit(); // 修正點：自動關閉編輯面板並返回內容頁
+    exitEdit(); // 返回顯示頁面，清空編輯區
     document.getElementById("content").scrollTop = 0;
 }
 
@@ -81,7 +70,47 @@ function exitEdit() {
     document.getElementById("btn-cancel-edit").style.display = "none";
 }
 
-// --- 樹狀選單渲染 ---
+// --- 分類編輯功能修正 ---
+function addCategory() {
+    if (!activeNode) return alert("請先選取一個分類");
+    const name = prompt("請輸入新分類名稱：");
+    if (name) {
+        if (!activeNode.children) activeNode.children = [];
+        activeNode.children.push({ name, children: [], items: [] });
+        save();
+        renderTree(db.categories, document.getElementById("nav-tree"));
+    }
+}
+
+function renameCategory() {
+    if (!activeNode) return alert("請先選取一個分類");
+    const name = prompt("請輸入新的分類名稱：", activeNode.name);
+    if (name) {
+        activeNode.name = name;
+        save();
+        renderTree(db.categories, document.getElementById("nav-tree"));
+        document.getElementById('current-path').innerHTML = `📍 <strong>目前定位：</strong>${name}`;
+    }
+}
+
+function deleteCategory() {
+    if (!activeNode) return;
+    if (confirm(`確定要刪除「${activeNode.name}」及其內容嗎？`)) {
+        const findAndRemove = (parentArr) => {
+            const idx = parentArr.findIndex(n => n === activeNode);
+            if (idx > -1) { parentArr.splice(idx, 1); return true; }
+            for (let child of parentArr) { if (child.children && findAndRemove(child.children)) return true; }
+            return false;
+        };
+        findAndRemove(db.categories);
+        activeNode = null;
+        save();
+        renderTree(db.categories, document.getElementById("nav-tree"));
+        document.getElementById("display-view").innerHTML = "";
+    }
+}
+
+// --- 選單與顯示 ---
 function renderTree(nodes, container) {
     container.innerHTML = "";
     nodes.forEach((node) => {
@@ -105,7 +134,7 @@ function renderTree(nodes, container) {
                 childrenBox.style.display = childrenBox.style.display === "none" ? "block" : "none";
             } else {
                 renderDisplay(node.items || []);
-                if (window.innerWidth <= 1024) closeMenu(); // 修正點：手機版選取後收回選單
+                if (window.innerWidth <= 1024) closeMenu();
             }
         };
 
@@ -124,11 +153,11 @@ function renderDisplay(items) {
     view.innerHTML = items.map((item, idx) => `
         <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                <h2 style="margin:0 0 10px 0;">${item.name}</h2>
+                <h2 style="margin:0 0 10px 0; color:var(--primary);">${item.name}</h2>
                 ${isAdmin ? `<button class="btn btn-outline" onclick="startEdit(${idx})">✏</button>` : ''}
             </div>
             <div class="gallery">${(item.imgs || []).map(src => `<img class="gallery-img" src="${src}" onclick="window.open('${src}')">`).join('')}</div>
-            <p style="white-space: pre-wrap;">${item.text}</p>
+            <p style="white-space: pre-wrap; line-height:1.6;">${item.text}</p>
         </div>`).join("");
 }
 
@@ -151,26 +180,24 @@ function toggleAdmin() {
         document.getElementById("admin-panel").style.display = "block";
         document.getElementById("btn-settings").style.display = "block";
         document.getElementById("admin-toggle").innerText = "✅ 管理模式中";
+        if(activeNode) renderDisplay(activeNode.items);
     }
 }
 
 function smartSearch() {
     const q = document.getElementById("search-bar").value.toLowerCase();
     if (!q) { if (activeNode) renderDisplay(activeNode.items); return; }
-    let results = [];
-    const searchDeep = (nodes) => {
-        nodes.forEach(node => {
-            if (node.items) node.items.forEach(item => { if (item.name.toLowerCase().includes(q)) results.push(item); });
-            if (node.children) searchDeep(node.children);
-        });
-    };
-    searchDeep(db.categories);
-    renderDisplay(results);
+    let res = [];
+    const search = (nodes) => nodes.forEach(n => {
+        if (n.items) n.items.forEach(i => { if (i.name.toLowerCase().includes(q) || i.text.toLowerCase().includes(q)) res.push(i); });
+        if (n.children) search(n.children);
+    });
+    search(db.categories);
+    renderDisplay(res);
 }
 
-// 初始化
 window.onload = () => {
-    updateUIConfigs();
+    document.getElementById("db-name-display").innerText = db.config.dbName;
     renderTree(db.categories, document.getElementById("nav-tree"));
 };
 
