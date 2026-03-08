@@ -41,22 +41,7 @@ function renderAfterLoad() {
     renderTree(db.categories, document.getElementById("nav-tree"));
 }
 
-async function saveToCloud() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-    try {
-        await fetch(API_URL, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(db)
-        });
-        console.log("☁️ 雲端同步指令已發送");
-    } catch (e) {
-        console.error("☁️ 同步失敗", e);
-    }
-}
-
-// --- 3. 圖片處理 (同時支援檔案與網址) ---
+// --- 3. 圖片處理 ---
 function addImgByUrl() {
     const urlInput = document.getElementById("input-img-url");
     const url = urlInput ? urlInput.value.trim() : "";
@@ -87,9 +72,16 @@ function renderImgManager() {
         </div>`).join("");
 }
 
-// --- 4. 介面渲染與導覽 ---
-const toggleMenu = () => document.getElementById("sidebar").classList.toggle("open");
-const closeMenu = () => document.getElementById("sidebar").classList.remove("open");
+// --- 4. 介面渲染與導覽 (修正手機選單開關) ---
+function toggleMenu() {
+    const sb = document.getElementById("sidebar");
+    if (sb) sb.classList.toggle("open");
+}
+
+function closeMenu() {
+    const sb = document.getElementById("sidebar");
+    if (sb) sb.classList.remove("open");
+}
 
 function linkify(text) {
     const urlPattern = /(https?:\/\/[^\s]+)/g;
@@ -115,8 +107,11 @@ function renderTree(nodes, container) {
             e.stopPropagation();
             document.querySelectorAll('.nav-node').forEach(el => el.classList.remove('active-node'));
             titleLine.classList.add('active-node');
-            if (hasChildren) childBox.style.display = childBox.style.display === "block" ? "none" : "block";
-            else if (window.innerWidth <= 1024) setTimeout(closeMenu, 150);
+            if (hasChildren) {
+                childBox.style.display = childBox.style.display === "block" ? "none" : "block";
+            } else {
+                if (window.innerWidth <= 1024) setTimeout(closeMenu, 150);
+            }
             activeNode = node;
             const pathEl = document.getElementById('current-path');
             if(pathEl) pathEl.innerText = `📍 定位：${node.name}`;
@@ -185,7 +180,7 @@ function startEdit(idx) {
     window.scrollTo({ top: document.getElementById('admin-panel').offsetTop, behavior: 'smooth' });
 }
 
-// --- 6. 分類與內容操作 (確保這些函式存在) ---
+// --- 6. 分類與內容操作 ---
 async function addRootCategory() {
     const name = prompt("新增第一層總分類名稱：");
     if (name) {
@@ -238,22 +233,15 @@ async function saveContent() {
 }
 
 async function saveToCloud() {
-    // 先儲存到本地瀏覽器，防止網路斷線遺失資料
     localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-    
-    console.log("正在同步至雲端...");
-    
     try {
-        // 這裡不需要 mode: "no-cors"，因為我們只需要送出資料
-        const response = await fetch(API_URL, {
+        await fetch(API_URL, {
             method: "POST",
-            body: JSON.stringify(db) // 直接傳送 JSON 字串
+            body: JSON.stringify(db) 
         });
-        
         console.log("☁️ 雲端同步指令已成功發送");
     } catch (e) {
-        console.error("☁️ 同步失敗，請檢查網路或 API 網址", e);
-        alert("雲端同步失敗，資料目前僅儲存在此瀏覽器中。");
+        console.error("☁️ 同步失敗", e);
     }
 }
 
@@ -295,7 +283,6 @@ async function saveSettings() {
     location.reload();
 }
 
-// 監聽主區域點擊收回手機選單
 document.getElementById("main-container").addEventListener("click", () => {
     if (window.innerWidth <= 1024) closeMenu();
 });
