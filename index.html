@@ -34,7 +34,11 @@
         <div id="display-view"></div>
 
         <div id="admin-panel" style="display:none;" class="card">
-            <h3 style="margin-top:0;">📂 分類與內容管理</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="margin:0;">📂 分類與內容管理</h3>
+                <button class="btn btn-danger" onclick="exitAdmin()" style="padding: 5px 15px;">❌ 退出管理</button>
+            </div>
+            
             <div id="current-path" style="margin-bottom:10px; color:var(--accent); font-weight:bold;">📍 請選取左側選單路徑</div>
             
             <div class="btn-group-row">
