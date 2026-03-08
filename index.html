@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>企業知識管理系統</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -20,7 +20,6 @@
 
 <div id="main-container">
     <header>
-        <header id="top-header"></header>
         <div class="header-content">
             <button onclick="toggleMenu(event)" class="mobile-only">☰</button>
             <input type="text" id="search-bar" placeholder="🔍 搜尋標題或內容..." oninput="smartSearch()">
@@ -44,13 +43,14 @@
             <hr>
             <div class="editor-form">
                 <input type="text" id="edit-title" placeholder="標題">
-                <textarea id="edit-desc" placeholder="內容" rows="5"></textarea>
-                <div class="img-input-group">
-                    <input type="text" id="input-img-url" placeholder="圖片網址">
-                    <button onclick="addImgByUrl()">新增</button>
+                <textarea id="edit-desc" placeholder="內容" rows="8"></textarea>
+                <div class="btn-group-row">
+                    <input type="text" id="input-img-url" placeholder="圖片網址" style="flex:1; margin-bottom:0;">
+                    <button class="btn btn-outline" onclick="addImgByUrl()">新增圖片</button>
                 </div>
                 <div id="img-manager-zone"></div>
-                <button id="btn-save-main" class="btn btn-save" style="width:100%;" onclick="saveContent()">💾 儲存並同步雲端</button>
+                <button id="btn-save-main" class="btn btn-save" style="width:100%; margin-top:10px;" onclick="saveContent()">💾 儲存內容</button>
+                <button class="btn btn-outline" style="width:100%; margin-top:5px;" onclick="exitEdit()">取消編輯</button>
             </div>
         </div>
     </main>
@@ -60,13 +60,13 @@
     <div class="modal-content">
         <h3>🛠 進階設定</h3>
         <label>系統名稱</label>
-        <input type="text" id="set-db-name" style="width:100%; margin-bottom:10px;">
+        <input type="text" id="set-db-name" class="editor-form" style="width:100%;">
         <label>新管理密碼</label>
-        <input type="password" id="set-new-pw" style="width:100%; margin-bottom:10px;">
+        <input type="password" id="set-new-pw" class="editor-form" style="width:100%;">
         
         <div class="btn-group-row">
-            <button class="btn btn-outline" onclick="exportDB()">📦 備份匯出</button>
-            <button class="btn btn-outline" onclick="document.getElementById('import-f').click()">📥 資料匯入</button>
+            <button class="btn btn-outline" onclick="exportDB()" style="flex:1">📦 備份匯出</button>
+            <button class="btn btn-outline" onclick="document.getElementById('import-f').click()" style="flex:1">📥 匯入</button>
         </div>
         <input type="file" id="import-f" hidden onchange="importDB(this)">
         
