@@ -10,10 +10,28 @@ let isAdmin = false;
 
 const save = () => localStorage.setItem("v6_knowledge_db", JSON.stringify(db));
 
+// ---------------- 側邊欄滑動收合邏輯 ----------------
+let touchStartX = 0;
+let touchEndX = 0;
+
+const sidebar = document.getElementById("sidebar");
+sidebar.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, false);
+sidebar.addEventListener('touchend', e => {
+    touchEndX = e.changedTouches[0].screenX;
+    handleSwipe();
+}, false);
+
+function handleSwipe() {
+    // 如果向左滑動超過 50px，則關閉
+    if (touchStartX - touchEndX > 50) {
+        closeMenu();
+    }
+}
+
 function toggleMenu() { document.getElementById("sidebar").classList.toggle("open"); }
 function closeMenu() { document.getElementById("sidebar").classList.remove("open"); }
 
-// --- 圖片管理 ---
+// ---------------- 圖片管理 ----------------
 function addLocalImg(input) {
     if (tempImgs.length >= 5) return alert("最多 5 張圖片");
     const file = input.files[0];
@@ -37,7 +55,7 @@ function renderImgManager() {
         </div>`).join("");
 }
 
-// --- 儲存內容 ---
+// ---------------- 內容儲存 ----------------
 function saveContent() {
     if (!activeNode) return alert("請先從左側選單選取路徑");
     const name = document.getElementById("edit-title").value.trim();
@@ -61,8 +79,7 @@ function saveContent() {
 }
 
 function exitEdit() {
-    editingIdx = -1;
-    tempImgs = [];
+    editingIdx = -1; tempImgs = [];
     document.getElementById("edit-title").value = "";
     document.getElementById("edit-desc").value = "";
     renderImgManager();
@@ -70,10 +87,20 @@ function exitEdit() {
     document.getElementById("btn-cancel-edit").style.display = "none";
 }
 
-// --- 分類編輯修正 (新增刪除保護) ---
+// ---------------- 分類管理功能 (新增：建立頂層分類) ----------------
+function addRootCategory() {
+    const name = prompt("請輸入新的「第一層」總分類名稱：");
+    if (name) {
+        db.categories.push({ name, children: [], items: [] });
+        save();
+        renderTree(db.categories, document.getElementById("nav-tree"));
+        alert("頂層分類已建立");
+    }
+}
+
 function addCategory() {
-    if (!activeNode) return alert("請先選取父分類路徑");
-    const name = prompt("請輸入新分類名稱：");
+    if (!activeNode) return alert("請先選取一個現有的父分類");
+    const name = prompt(`在「${activeNode.name}」下新增子分類：`);
     if (name) {
         if (!activeNode.children) activeNode.children = [];
         activeNode.children.push({ name, children: [], items: [] });
@@ -83,33 +110,29 @@ function addCategory() {
 }
 
 function renameCategory() {
-    if (!activeNode) return alert("請先選取分類路徑");
-    const name = prompt("請輸入新名稱：", activeNode.name);
+    if (!activeNode) return alert("請選取分類路徑");
+    const name = prompt("輸入新名稱：", activeNode.name);
     if (name) {
         activeNode.name = name;
         save();
         renderTree(db.categories, document.getElementById("nav-tree"));
-        document.getElementById('current-path').innerHTML = `📍 <strong>目前路徑：</strong>${name}`;
+        document.getElementById('current-path').innerText = `📍 目前路徑：${name}`;
     }
 }
 
 function deleteCategory() {
     if (!activeNode) return;
+    const isRoot = db.categories.includes(activeNode);
+    if (isRoot && db.categories.length <= 1) return alert("⚠️ 系統必須保留至少一個分類項目！");
 
-    // 核心修正：判斷是否為最後一個根節點
-    const isRootNode = db.categories.includes(activeNode);
-    if (isRootNode && db.categories.length <= 1) {
-        return alert("⚠️ 錯誤：系統必須保留至少一個主要分類，否則將無法建立新路徑！");
-    }
-
-    if (confirm(`確定要刪除「${activeNode.name}」及其內容嗎？`)) {
-        const removeFn = (arr) => {
+    if (confirm(`確定要刪除「${activeNode.name}」嗎？`)) {
+        const remove = (arr) => {
             const i = arr.findIndex(n => n === activeNode);
             if (i > -1) { arr.splice(i, 1); return true; }
-            for (let c of arr) { if (c.children && removeFn(c.children)) return true; }
+            for (let c of arr) { if (c.children && remove(c.children)) return true; }
             return false;
         };
-        removeFn(db.categories);
+        remove(db.categories);
         activeNode = null;
         save();
         renderTree(db.categories, document.getElementById("nav-tree"));
@@ -118,7 +141,7 @@ function deleteCategory() {
     }
 }
 
-// --- 選單渲染 ---
+// ---------------- 選單與顯示渲染 ----------------
 function renderTree(nodes, container) {
     container.innerHTML = "";
     nodes.forEach((node) => {
@@ -142,6 +165,7 @@ function renderTree(nodes, container) {
                 childrenBox.style.display = childrenBox.style.display === "none" ? "block" : "none";
             } else {
                 renderDisplay(node.items || []);
+                // 修正：只有在行動端且點擊「最底層」內容分類時才關閉
                 if (window.innerWidth <= 1024) closeMenu();
             }
         };
@@ -161,7 +185,7 @@ function renderDisplay(items) {
     view.innerHTML = items.map((item, idx) => `
         <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h2 style="margin:0; color:var(--primary);">${item.name}</h2>
+                <h3 style="margin:0; color:var(--primary);">${item.name}</h3>
                 ${isAdmin ? `
                     <div class="btn-group-row">
                         <button class="btn btn-outline" onclick="startEdit(${idx})">✏</button>
@@ -187,15 +211,16 @@ function startEdit(idx) {
 }
 
 function deleteItem(idx) {
-    if (confirm("確定刪除此內容？")) {
+    if (confirm("確定刪除此條內容？")) {
         activeNode.items.splice(idx, 1);
         save();
         renderDisplay(activeNode.items);
     }
 }
 
+// ---------------- 系統功能 ----------------
 function toggleAdmin() {
-    const pw = prompt("請輸入密碼:");
+    const pw = prompt("請輸入管理密碼:");
     if (pw === db.config.password) {
         isAdmin = true;
         document.getElementById("admin-panel").style.display = "block";
@@ -209,11 +234,11 @@ function smartSearch() {
     const q = document.getElementById("search-bar").value.toLowerCase();
     if (!q) { if (activeNode) renderDisplay(activeNode.items); return; }
     let res = [];
-    const search = (nodes) => nodes.forEach(n => {
+    const s = (nodes) => nodes.forEach(n => {
         if (n.items) n.items.forEach(i => { if (i.name.toLowerCase().includes(q) || i.text.toLowerCase().includes(q)) res.push(i); });
-        if (n.children) search(n.children);
+        if (n.children) s(n.children);
     });
-    search(db.categories);
+    s(db.categories);
     renderDisplay(res);
 }
 
@@ -245,7 +270,7 @@ function importDB(input) {
     const f = input.files[0];
     if (f) {
         const r = new FileReader();
-        r.onload = (e) => { db = JSON.parse(e.target.result); save(); location.reload(); };
+        r.onload = (e) => { try { db = JSON.parse(e.target.result); save(); location.reload(); } catch(err){alert("匯入失敗，請檢查格式");} };
         r.readAsText(f);
     }
 }
