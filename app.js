@@ -8,7 +8,7 @@ let tempImgs = [];
 let editingIdx = -1;
 let isAdmin = false;
 
-// --- 2. 智慧載入邏輯 (並行競爭機制) ---
+// --- 2. 智慧載入與同步 ---
 async function initSystem() {
     const nameDisplay = document.getElementById("db-name-display");
     if(nameDisplay) nameDisplay.innerText = "連線中...";
@@ -21,7 +21,7 @@ async function initSystem() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
         console.log("✅ 雲端同步成功");
     } catch (e) {
-        console.warn("⚠️ 雲端超時或失敗，嘗試本地備援");
+        console.warn("⚠️ 備援機制啟動:", e.message);
         const savedData = localStorage.getItem(STORAGE_KEY);
         if (savedData && savedData !== "undefined") {
             db = JSON.parse(savedData);
@@ -49,20 +49,20 @@ async function saveToCloud() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(db)
         });
-        console.log("☁️ 雲端同步指令已發送");
+        console.log("☁️ 雲端同步完成");
     } catch (e) {
         console.error("☁️ 同步失敗", e);
     }
 }
 
-// --- 3. 圖片處理 (支援檔案與網址) ---
+// --- 3. 圖片管理功能 (網址與檔案同步並存) ---
 function addImgByUrl() {
     const urlInput = document.getElementById("input-img-url");
     const url = urlInput.value.trim();
     if (url) {
-        if (tempImgs.length >= 5) return alert("最多上傳 5 張圖片");
+        if (tempImgs.length >= 5) return alert("最多 5 張圖片");
         tempImgs.push(url);
-        urlInput.value = ""; // 清空欄位
+        urlInput.value = ""; 
         renderImgManager();
     }
 }
@@ -86,7 +86,7 @@ function renderImgManager() {
         </div>`).join("");
 }
 
-// --- 4. 側邊欄與內容渲染 ---
+// --- 4. 側邊欄與顯示 ---
 const toggleMenu = () => document.getElementById("sidebar").classList.toggle("open");
 const closeMenu = () => document.getElementById("sidebar").classList.remove("open");
 
@@ -143,21 +143,108 @@ function renderDisplay(items) {
         </div>`).join("");
 }
 
-// --- 5. 管理功能 ---
+// --- 5. 管理與編輯功能 ---
 function toggleAdmin() {
     if (isAdmin) return exitAdmin();
-    const pw = prompt("密碼:");
+    const pw = prompt("請輸入密碼:");
     if (pw === db.config.password) {
         isAdmin = true;
         document.getElementById("admin-panel").style.display = "block";
         document.getElementById("settings-area").style.display = "block";
         document.getElementById("admin-toggle").innerText = "🔓 退出管理";
         if(activeNode) renderDisplay(activeNode.items);
-    } else if (pw !== null) alert("錯誤");
+    } else if (pw !== null) alert("密碼錯誤");
 }
 
 function exitAdmin() {
-    isAdmin = false; exitEdit();
+    isAdmin = false; 
+    exitEdit();
     document.getElementById("admin-panel").style.display = "none";
     document.getElementById("settings-area").style.display = "none";
-    document.getElementById("admin-
+    document.getElementById("admin-toggle").innerText = "🔐 管理模式";
+    if(activeNode) renderDisplay(activeNode.items);
+}
+
+function exitEdit() {
+    editingIdx = -1; tempImgs = [];
+    document.getElementById("edit-title").value = "";
+    document.getElementById("edit-desc").value = "";
+    document.getElementById("input-file").value = "";
+    if(document.getElementById("input-img-url")) document.getElementById("input-img-url").value = "";
+    renderImgManager();
+    document.getElementById("btn-save-main").innerText = "💾 儲存並同步雲端";
+    document.getElementById("btn-cancel-edit").style.display = "none";
+}
+
+function startEdit(idx) {
+    editingIdx = idx;
+    const item = activeNode.items[idx];
+    document.getElementById("edit-title").value = item.name;
+    document.getElementById("edit-desc").value = item.text;
+    tempImgs = [...(item.imgs || [])];
+    renderImgManager();
+    document.getElementById("btn-save-main").innerText = "🆙 更新並同步雲端";
+    document.getElementById("btn-cancel-edit").style.display = "inline-block";
+    document.getElementById("admin-panel").scrollIntoView({ behavior: 'smooth' });
+}
+
+async function saveContent() {
+    if (!activeNode) return alert("請選取分類");
+    const name = document.getElementById("edit-title").value.trim();
+    const text = document.getElementById("edit-desc").value.trim();
+    if (!name) return alert("標題必填");
+    const newItem = { name, text, imgs: [...tempImgs] };
+    if (!activeNode.items) activeNode.items = [];
+    if (editingIdx > -1) activeNode.items[editingIdx] = newItem;
+    else activeNode.items.push(newItem);
+    renderDisplay(activeNode.items);
+    await saveToCloud();
+    exitEdit();
+}
+
+// --- 6. 分類管理與搜尋 ---
+async function addRootCategory() {
+    const name = prompt("新增總分類名稱：");
+    if (name) { db.categories.push({ name, children: [], items: [] }); renderTree(db.categories, document.getElementById("nav-tree")); await saveToCloud(); }
+}
+async function addCategory() {
+    if (!activeNode) return alert("請先選取分類");
+    const name = prompt(`在「${activeNode.name}」下新增子分類：`);
+    if (name) { if (!activeNode.children) activeNode.children = []; activeNode.children.push({ name, children: [], items: [] }); renderTree(db.categories, document.getElementById("nav-tree")); await saveToCloud(); }
+}
+async function deleteCategory() {
+    if (!activeNode || !confirm("確定刪除此分類及其所有內容？")) return;
+    const remove = (arr) => {
+        const idx = arr.findIndex(n => n === activeNode);
+        if (idx > -1) { arr.splice(idx, 1); return true; }
+        for (let c of arr) if (c.children && remove(c.children)) return true;
+        return false;
+    };
+    remove(db.categories); activeNode = null; await saveToCloud(); location.reload();
+}
+async function deleteItem(idx) {
+    if (confirm("確定刪除此內容？")) { activeNode.items.splice(idx, 1); renderDisplay(activeNode.items); await saveToCloud(); }
+}
+
+function smartSearch() {
+    const q = document.getElementById("search-bar").value.toLowerCase();
+    if (!q) { if (activeNode) renderDisplay(activeNode.items); return; }
+    let res = [];
+    const search = (nodes) => nodes.forEach(n => {
+        if (n.items) n.items.forEach(i => { if (i.name.toLowerCase().includes(q) || i.text.toLowerCase().includes(q)) res.push(i); });
+        if (n.children) search(n.children);
+    });
+    search(db.categories); renderDisplay(res);
+}
+
+// --- 7. 進階設定 ---
+const openModal = () => { document.getElementById("set-db-name").value = db.config.dbName; document.getElementById("settings-modal").style.display = "flex"; };
+const closeModal = () => document.getElementById("settings-modal").style.display = "none";
+async function saveSettings() {
+    const n = document.getElementById("set-db-name").value.trim();
+    const p = document.getElementById("set-new-pw").value.trim();
+    if (n) db.config.dbName = n; if (p) db.config.password = p;
+    await saveToCloud(); location.reload();
+}
+
+window.onload = initSystem;
