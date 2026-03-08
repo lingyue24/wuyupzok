@@ -1,31 +1,66 @@
-// --- 資料核心 ---
-let db = JSON.parse(localStorage.getItem("v6_knowledge_db")) || (typeof initialData !== 'undefined' ? initialData : {
-    config: { dbName: "知識管理系統", password: "1234" },
-    categories: []
-});
+// --- 1. 配置與初始化 (請替換下方 URL) ---
+const API_URL = "https://script.google.com/macros/s/AKfycbwozdRPykXdobo-KhqnvajCBpTNDB2gH4g8MLQ_2RU62BV5-DWVHt4vtUzMe6C56vXbzQ/exec"; 
+const STORAGE_KEY = "v6_knowledge_db";
 
+let db = { config: { dbName: "雲端載入中..." }, categories: [] };
 let activeNode = null;
 let tempImgs = [];
 let editingIdx = -1;
 let isAdmin = false;
 
-const save = () => localStorage.setItem("v6_knowledge_db", JSON.stringify(db));
+// --- 2. 雲端同步核心功能 ---
 
-// --- 側邊欄與導航控制 ---
-const toggleMenu = () => {
-    document.getElementById("sidebar").classList.toggle("open");
-};
-
-const closeMenu = () => {
-    document.getElementById("sidebar").classList.remove("open");
-};
-
-// 監聽側邊欄外部點擊收回
-document.getElementById("sidebar").addEventListener("click", (e) => {
-    // 如果點擊的是分類名稱以外的地方（如背景），則收回選單
-    if (window.innerWidth <= 1024 && e.target.id === "sidebar") {
-        closeMenu();
+// 從 Google Sheets 讀取資料
+async function loadFromCloud() {
+    try {
+        const response = await fetch(API_URL);
+        const cloudData = await response.json();
+        if (cloudData && cloudData.categories) {
+            db = cloudData;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); // 備份到本地
+            renderAfterLoad();
+            console.log("雲端資料同步完成");
+        }
+    } catch (e) {
+        console.error("雲端讀取失敗，嘗試讀取本地快取", e);
+        const local = localStorage.getItem(STORAGE_KEY);
+        if (local) {
+            db = JSON.parse(local);
+            renderAfterLoad();
+        }
     }
+}
+
+// 寫入資料到 Google Sheets
+async function saveToCloud() {
+    try {
+        // 先存本地，確保萬一網路斷線資料還在
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+        
+        await fetch(API_URL, {
+            method: "POST",
+            mode: "no-cors", // GAS 跨域安全性限制
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(db)
+        });
+        console.log("資料已指令發送至雲端");
+    } catch (e) {
+        console.error("雲端儲存失敗", e);
+    }
+}
+
+function renderAfterLoad() {
+    document.getElementById("db-name-display").innerText = db.config.dbName;
+    renderTree(db.categories, document.getElementById("nav-tree"));
+}
+
+// --- 3. UI 與 編輯功能 (承襲 V6.9.6) ---
+
+const toggleMenu = () => document.getElementById("sidebar").classList.toggle("open");
+const closeMenu = () => document.getElementById("sidebar").classList.remove("open");
+
+document.getElementById("sidebar").addEventListener("click", (e) => {
+    if (window.innerWidth <= 1024 && e.target.id === "sidebar") closeMenu();
 });
 
 function toggleAdmin() {
@@ -49,7 +84,6 @@ function exitAdmin() {
     if(activeNode) renderDisplay(activeNode.items);
 }
 
-// --- 編輯與網址轉換功能 ---
 function linkify(text) {
     const urlPattern = /(https?:\/\/[^\s]+)/g;
     return text.replace(urlPattern, '<a href="$1" target="_blank" style="color:#3498db; text-decoration:underline;">$1</a>');
@@ -62,14 +96,9 @@ function exitEdit() {
     document.getElementById("edit-desc").value = "";
     document.getElementById("input-file").value = "";
     renderImgManager();
-    document.getElementById("btn-save-main").innerText = "💾 儲存內容";
+    document.getElementById("btn-save-main").innerText = "💾 儲存並同步雲端";
     document.getElementById("btn-cancel-edit").style.display = "none";
-    
-    setTimeout(() => {
-        const contentArea = document.getElementById("content");
-        if(contentArea) contentArea.scrollTop = 0;
-        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    }, 100);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function startEdit(idx) {
@@ -79,13 +108,13 @@ function startEdit(idx) {
     document.getElementById("edit-desc").value = item.text;
     tempImgs = [...(item.imgs || [])];
     renderImgManager();
-    document.getElementById("btn-save-main").innerText = "🆙 更新內容";
+    document.getElementById("btn-save-main").innerText = "🆙 更新並同步雲端";
     document.getElementById("btn-cancel-edit").style.display = "inline-block";
-    document.getElementById("admin-panel").scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById("admin-panel").scrollIntoView({ behavior: 'smooth' });
 }
 
-function saveContent() {
-    if (!activeNode) return alert("請先選取分類");
+async function saveContent() {
+    if (!activeNode) return alert("請選取分類");
     const name = document.getElementById("edit-title").value.trim();
     const text = document.getElementById("edit-desc").value.trim();
     if (!name) return alert("標題必填");
@@ -95,89 +124,86 @@ function saveContent() {
     if (editingIdx > -1) activeNode.items[editingIdx] = newItem;
     else activeNode.items.push(newItem);
 
-    save();
     renderDisplay(activeNode.items);
+    await saveToCloud(); // 呼叫同步
     exitEdit();
 }
 
-// --- 核心修正：分類樹摺疊渲染 ---
-function renderTree(nodes, container, level = 0) {
+// --- 4. 樹狀選單渲染 (支援摺疊) ---
+function renderTree(nodes, container) {
     container.innerHTML = "";
     nodes.forEach((node) => {
         const hasChildren = node.children && node.children.length > 0;
-        
-        // 建立分類節點外殼
         let nodeWrapper = document.createElement("div");
         nodeWrapper.className = "nav-node-wrapper";
         
-        // 建立標題列
         let titleLine = document.createElement("div");
         titleLine.className = "nav-node";
-        // 如果有子分類，顯示展開/收合圖示
-        const icon = hasChildren ? "📂 " : "📄 ";
-        titleLine.innerHTML = `<span>${icon}${node.name}</span>`;
+        titleLine.innerHTML = `<span>${hasChildren ? "📂 " : "📄 "}${node.name}</span>`;
         
-        // 子分類容器
         let childBox = document.createElement("div");
         childBox.className = "child-container";
-        childBox.style.display = "none"; // 預設收合
+        childBox.style.display = "none"; 
         
-        // 點擊事件邏輯
         titleLine.onclick = (e) => {
             e.stopPropagation();
-            
-            // 1. 切換啟動樣式
             document.querySelectorAll('.nav-node').forEach(el => el.classList.remove('active-node'));
             titleLine.classList.add('active-node');
-            
-            // 2. 切換摺疊狀態
-            if (hasChildren) {
-                const isExpanded = childBox.style.display === "block";
-                childBox.style.display = isExpanded ? "none" : "block";
-                titleLine.querySelector('span').innerText = (isExpanded ? "📂 " : "📂 ") + node.name;
-            }
-            
-            // 3. 載入內容
+            if (hasChildren) childBox.style.display = childBox.style.display === "block" ? "none" : "block";
             activeNode = node;
             document.getElementById('current-path').innerText = `📍 定位：${node.name}`;
             renderDisplay(node.items || []);
-            
-            // 4. 如果是最終層級（無子分類），在手機端點擊後自動收回側邊欄
-            if (!hasChildren && window.innerWidth <= 1024) {
-                setTimeout(closeMenu, 200);
-            }
+            if (!hasChildren && window.innerWidth <= 1024) setTimeout(closeMenu, 200);
         };
         
         nodeWrapper.appendChild(titleLine);
-        
         if (hasChildren) {
-            renderTree(node.children, childBox, level + 1);
+            renderTree(node.children, childBox);
             nodeWrapper.appendChild(childBox);
         }
-        
         container.appendChild(nodeWrapper);
     });
 }
 
 function renderDisplay(items) {
     const view = document.getElementById("display-view");
-    if (items.length === 0) {
-        view.innerHTML = '<div style="text-align:center; padding:50px; color:#999;">此分類暫無內容。</div>';
-        return;
-    }
-    view.innerHTML = items.map((item, idx) => `
+    view.innerHTML = items.length === 0 ? '<div style="text-align:center; padding:50px; color:#999;">此分類暫無內容。</div>' :
+    items.map((item, idx) => `
         <div class="card">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h2 style="margin:0; font-size:1.2em;">${item.name}</h2>
+            <div style="display:flex; justify-content:space-between;">
+                <h2 style="margin:0;">${item.name}</h2>
                 ${isAdmin ? `<div><button class="btn btn-outline" onclick="startEdit(${idx})">✏</button>
-                <button class="btn btn-danger" onclick="deleteItem(${idx})" style="padding:5px 10px; margin-left:5px;">🗑</button></div>` : ''}
+                <button class="btn btn-danger" onclick="deleteItem(${idx})" style="padding:5px; margin-left:5px;">🗑</button></div>` : ''}
             </div>
             <div class="gallery">${(item.imgs || []).map(src => `<img src="${src}" onclick="window.open('${src}')">`).join('')}</div>
-            <p style="white-space: pre-wrap; line-height:1.7; margin-top:15px;">${linkify(item.text)}</p>
+            <p style="white-space: pre-wrap; margin-top:15px;">${linkify(item.text)}</p>
         </div>`).join("");
 }
 
-// --- 其他管理功能 ---
+// --- 5. 管理輔助 (皆須呼叫 saveToCloud) ---
+async function addRootCategory() {
+    const name = prompt("名稱：");
+    if (name) { db.categories.push({ name, children: [], items: [] }); renderTree(db.categories, document.getElementById("nav-tree")); await saveToCloud(); }
+}
+async function addCategory() {
+    if (!activeNode) return;
+    const name = prompt("子分類名稱：");
+    if (name) { if (!activeNode.children) activeNode.children = []; activeNode.children.push({ name, children: [], items: [] }); renderTree(db.categories, document.getElementById("nav-tree")); await saveToCloud(); }
+}
+async function deleteCategory() {
+    if (!activeNode || !confirm("確定刪除？")) return;
+    const remove = (arr) => {
+        const idx = arr.findIndex(n => n === activeNode);
+        if (idx > -1) { arr.splice(idx, 1); return true; }
+        for (let c of arr) if (c.children && remove(c.children)) return true;
+        return false;
+    };
+    remove(db.categories); activeNode = null; await saveToCloud(); location.reload();
+}
+async function deleteItem(idx) {
+    if (confirm("刪除？")) { activeNode.items.splice(idx, 1); renderDisplay(activeNode.items); await saveToCloud(); }
+}
+
 function smartSearch() {
     const q = document.getElementById("search-bar").value.toLowerCase();
     if (!q) { if (activeNode) renderDisplay(activeNode.items); return; }
@@ -189,38 +215,7 @@ function smartSearch() {
     search(db.categories); renderDisplay(res);
 }
 
-function addRootCategory() {
-    const name = prompt("第一層分類名稱：");
-    if (name) { db.categories.push({ name, children: [], items: [] }); save(); renderTree(db.categories, document.getElementById("nav-tree")); }
-}
-function addCategory() {
-    if (!activeNode) return alert("請選取分類");
-    const name = prompt(`在「${activeNode.name}」下新增子分類：`);
-    if (name) {
-        if (!activeNode.children) activeNode.children = [];
-        activeNode.children.push({ name, children: [], items: [] });
-        save(); renderTree(db.categories, document.getElementById("nav-tree"));
-    }
-}
-function deleteCategory() {
-    if (!activeNode || !confirm("刪除此分類？")) return;
-    const remove = (arr) => {
-        const idx = arr.findIndex(n => n === activeNode);
-        if (idx > -1) { arr.splice(idx, 1); return true; }
-        for (let c of arr) if (c.children && remove(c.children)) return true;
-        return false;
-    };
-    remove(db.categories); activeNode = null; save(); renderTree(db.categories, document.getElementById("nav-tree"));
-    document.getElementById("display-view").innerHTML = "";
-}
-function renameCategory() {
-    if (!activeNode) return;
-    const n = prompt("新名稱：", activeNode.name);
-    if (n) { activeNode.name = n; save(); renderTree(db.categories, document.getElementById("nav-tree")); }
-}
-function deleteItem(idx) {
-    if (confirm("刪除內容？")) { activeNode.items.splice(idx, 1); save(); renderDisplay(activeNode.items); }
-}
+// --- 6. 圖片與設定 ---
 function addLocalImg(input) {
     const file = input.files[0];
     if (file && tempImgs.length < 5) {
@@ -232,32 +227,10 @@ function addLocalImg(input) {
 function renderImgManager() {
     const zone = document.getElementById("img-manager-zone");
     if(!zone) return;
-    zone.innerHTML = tempImgs.map((img, idx) => `
-        <div class="img-slot"><img src="${img}"><button onclick="tempImgs.splice(${idx},1);renderImgManager();" style="position:absolute; top:0; right:0; background:red; color:white; border:none; cursor:pointer;">×</button></div>`).join("");
-}
-const openModal = () => { document.getElementById("set-db-name").value = db.config.dbName; document.getElementById("settings-modal").style.display = "flex"; };
-const closeModal = () => document.getElementById("settings-modal").style.display = "none";
-function saveSettings() {
-    const n = document.getElementById("set-db-name").value.trim();
-    const p = document.getElementById("set-new-pw").value.trim();
-    if (n) db.config.dbName = n; if (p) db.config.password = p;
-    save(); location.reload();
-}
-function exportDB() {
-    const a = document.createElement('a'); a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db));
-    a.download = db.config.dbName + ".json"; a.click();
-}
-function importDB(input) {
-    const file = input.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => { db = JSON.parse(e.target.result); save(); location.reload(); };
-        reader.readAsText(file);
-    }
+    zone.innerHTML = tempImgs.map((img, idx) => `<div class="img-slot"><img src="${img}"><button onclick="tempImgs.splice(${idx},1);renderImgManager();" style="position:absolute; top:0; right:0; background:red; color:white; border:none;">×</button></div>`).join("");
 }
 
+// 初始化：啟動雲端同步
 window.onload = () => {
-    const nameDisplay = document.getElementById("db-name-display");
-    if(nameDisplay) nameDisplay.innerText = db.config.dbName;
-    renderTree(db.categories, document.getElementById("nav-tree"));
+    loadFromCloud();
 };
