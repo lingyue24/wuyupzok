@@ -1,3 +1,4 @@
+
 :root {
     --primary: #2c3e50;
     --accent: #3498db;
@@ -23,7 +24,7 @@ body {
     color: white; 
     display: flex; 
     flex-direction: column; 
-    z-index: 3000; 
+    z-index: 5000; /* 提升側邊欄層級 */
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     height: 100%;
 }
@@ -37,19 +38,31 @@ body {
 .active-node { background: var(--accent) !important; font-weight: bold; }
 .child-container { margin-left: 15px; border-left: 1px dashed rgba(255,255,255,0.2); }
 
-#main-container { flex: 1; display: flex; flex-direction: column; height: 100dvh; min-width: 0;}
+#main-container { flex: 1; display: flex; flex-direction: column; height: 100dvh; min-width: 0; position: relative; }
 header { background: white; padding: 10px 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 1000; flex-shrink: 0; }
 .header-content { display: flex; align-items: center; gap: 10px; }
 #search-bar { flex: 1; padding: 12px 15px; border-radius: 20px; border: 1px solid #ddd; outline: none; font-size: 16px; }
 
-#content { flex: 1; padding: 15px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-#sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2500; }
-.mobile-only { background: none; border: none; font-size: 24px; cursor: pointer; }
+/* 修正手機版遮罩 */
+#sidebar-overlay { 
+    display: none; 
+    position: fixed; 
+    top: 0; left: 0; 
+    width: 100%; height: 100%; 
+    background: rgba(0,0,0,0.5); 
+    z-index: 4000; 
+}
+
+.mobile-only { 
+    background: none; border: none; font-size: 28px; cursor: pointer; padding: 5px 10px; 
+    display: none; /* 電腦版隱藏 */
+}
 
 @media (max-width: 1024px) {
+    .mobile-only { display: block; }
     #sidebar { position: fixed; left: 0; transform: translateX(-100%); }
     #sidebar.open { transform: translateX(0); }
-    #sidebar.open + #sidebar-overlay { display: block !important; }
+    #sidebar.open + #sidebar-overlay { display: block; }
 }
 
 .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 15px; }
@@ -67,5 +80,5 @@ header { background: white; padding: 10px 15px; box-shadow: 0 2px 8px rgba(0,0,0
 .img-slot { position: relative; height: 60px; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
 .img-slot img { width: 100%; height: 100%; object-fit: cover; }
 .gallery img { width: 100%; border-radius: 8px; margin-top: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-.modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 4000; justify-content: center; align-items: center; }
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 6000; justify-content: center; align-items: center; }
 .modal-content { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; }
