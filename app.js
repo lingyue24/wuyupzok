@@ -1,6 +1,7 @@
+// 1. 資料初始化
 let db = JSON.parse(localStorage.getItem("v6_knowledge_db")) || {
-    config: { dbName: "我的企業知識庫", password: "1234" },
-    categories: [{ name: "💊 產品百科", children: [], items: [] }]
+    config: { dbName: "我的知識庫", password: "1234" },
+    categories: [{ name: "📁 第一個分類", children: [], items: [] }]
 };
 
 let activeNode = null;
@@ -10,34 +11,21 @@ let isAdmin = false;
 
 const save = () => localStorage.setItem("v6_knowledge_db", JSON.stringify(db));
 
-// ---------------- 側邊欄控制與向左滑動收回 ----------------
+// 2. 側邊欄與手勢監聽
 let touchStartX = 0;
 
 function setupGestures() {
     const sidebar = document.getElementById("sidebar");
-    
-    sidebar.addEventListener('touchstart', e => {
-        touchStartX = e.changedTouches[0].screenX;
-    }, { passive: true });
-
+    sidebar.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, {passive: true});
     sidebar.addEventListener('touchend', e => {
-        let touchEndX = e.changedTouches[0].screenX;
-        // 如果向左滑動距離超過 60px 則收回
-        if (touchStartX - touchEndX > 60) {
-            closeMenu();
-        }
-    }, { passive: true });
+        if (touchStartX - e.changedTouches[0].screenX > 60) closeMenu();
+    }, {passive: true});
 }
 
-function toggleMenu() { 
-    document.getElementById("sidebar").classList.toggle("open"); 
-}
+function toggleMenu() { document.getElementById("sidebar").classList.toggle("open"); }
+function closeMenu() { document.getElementById("sidebar").classList.remove("open"); }
 
-function closeMenu() { 
-    document.getElementById("sidebar").classList.remove("open"); 
-}
-
-// ---------------- 管理員模式控制 ----------------
+// 3. 管理權限與退出
 function toggleAdmin() {
     if (isAdmin) return exitAdmin();
     const pw = prompt("請輸入管理密碼:");
@@ -47,9 +35,7 @@ function toggleAdmin() {
         document.getElementById("btn-settings").style.display = "block";
         document.getElementById("admin-toggle").innerText = "🔓 退出管理";
         if(activeNode) renderDisplay(activeNode.items);
-    } else if (pw !== null) {
-        alert("密碼錯誤");
-    }
+    } else if (pw !== null) alert("密碼錯誤");
 }
 
 function exitAdmin() {
@@ -61,22 +47,23 @@ function exitAdmin() {
     if(activeNode) renderDisplay(activeNode.items);
 }
 
-// ---------------- 內容編輯邏輯 ----------------
+// 4. 編輯與儲存邏輯
 function saveContent() {
-    if (!activeNode) return alert("請選取分類路徑");
+    if (!activeNode) return alert("請先選取分類路徑");
     const name = document.getElementById("edit-title").value.trim();
     const text = document.getElementById("edit-desc").value.trim();
     if (!name) return alert("標題不能為空");
 
     const newItem = { name, text, imgs: [...tempImgs] };
     if (!activeNode.items) activeNode.items = [];
+    
     if (editingIdx > -1) activeNode.items[editingIdx] = newItem;
     else activeNode.items.push(newItem);
 
     save();
     renderDisplay(activeNode.items);
     exitEdit();
-    alert("✅ 儲存成功並返回");
+    alert("💾 已儲存！");
 }
 
 function exitEdit() {
@@ -88,7 +75,6 @@ function exitEdit() {
     document.getElementById("btn-cancel-edit").style.display = "none";
 }
 
-// 修改：開始編輯時，自動滾動到編輯區域最下方
 function startEdit(idx) {
     editingIdx = idx;
     const item = activeNode.items[idx];
@@ -100,75 +86,39 @@ function startEdit(idx) {
     document.getElementById("btn-save-main").innerText = "🆙 更新內容";
     document.getElementById("btn-cancel-edit").style.display = "block";
     
-    // 自動滾動到編輯面板
+    // 自動滾動到編輯器位置
     setTimeout(() => {
-        document.getElementById("admin-panel").scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
+        document.querySelector(".editor-form").scrollIntoView({ behavior: 'smooth' });
+    }, 200);
 }
 
-// 修改：當側邊欄開啟時，暫時禁止主頁面滾動（僅手機版）
-function toggleMenu() { 
-    const isOpening = !document.getElementById("sidebar").classList.contains("open");
-    document.getElementById("sidebar").classList.toggle("open");
-    // 如果開啟選單，鎖定背景；關閉則恢復
-    document.getElementById("content").style.overflowY = isOpening ? "hidden" : "auto";
-}
-
-function closeMenu() { 
-    document.getElementById("sidebar").classList.remove("open"); 
-    document.getElementById("content").style.overflowY = "auto";
-}
-
-// ---------------- 系統設定與分類 ----------------
-function openModal() { 
-    document.getElementById("set-db-name").value = db.config.dbName; 
-    document.getElementById("settings-modal").style.display = "flex"; 
-}
-function closeModal() { document.getElementById("settings-modal").style.display = "none"; }
-
-function saveSettings() {
-    const newName = document.getElementById("set-db-name").value.trim();
-    const newPw = document.getElementById("set-new-pw").value.trim();
-    if (newName) db.config.dbName = newName;
-    if (newPw) db.config.password = newPw;
-    save();
-    location.reload();
-}
-
+// 5. 分類管理功能
 function addRootCategory() {
-    const name = prompt("輸入新的第一層分類名稱：");
-    if (name) { 
-        db.categories.push({ name, children: [], items: [] }); 
-        save(); 
-        renderTree(db.categories, document.getElementById("nav-tree")); 
-    }
+    const name = prompt("第一層分類名稱：");
+    if (name) { db.categories.push({ name, children: [], items: [] }); save(); renderTree(db.categories, document.getElementById("nav-tree")); }
 }
 
 function addCategory() {
-    if (!activeNode) return alert("請選取分類");
+    if (!activeNode) return alert("請選取父分類");
     const name = prompt(`在「${activeNode.name}」下新增子分類：`);
     if (name) {
         if (!activeNode.children) activeNode.children = [];
         activeNode.children.push({ name, children: [], items: [] });
-        save();
-        renderTree(db.categories, document.getElementById("nav-tree"));
+        save(); renderTree(db.categories, document.getElementById("nav-tree"));
     }
 }
 
 function deleteCategory() {
     if (!activeNode) return;
-    if (db.categories.includes(activeNode) && db.categories.length <= 1) return alert("必須保留至少一個分類");
-    if (confirm(`確定刪除「${activeNode.name}」及其內容？`)) {
-        const remove = (arr) => {
+    if (confirm(`確定刪除「${activeNode.name}」？`)) {
+        const removeNode = (arr) => {
             const i = arr.findIndex(n => n === activeNode);
             if (i > -1) { arr.splice(i, 1); return true; }
-            for (let c of arr) if (c.children && remove(c.children)) return true;
+            for (let c of arr) if (c.children && removeNode(c.children)) return true;
             return false;
         };
-        remove(db.categories);
-        activeNode = null;
-        save();
-        renderTree(db.categories, document.getElementById("nav-tree"));
+        removeNode(db.categories);
+        activeNode = null; save(); renderTree(db.categories, document.getElementById("nav-tree"));
         document.getElementById("display-view").innerHTML = "";
     }
 }
@@ -179,82 +129,47 @@ function renameCategory() {
     if (n) { activeNode.name = n; save(); renderTree(db.categories, document.getElementById("nav-tree")); }
 }
 
-// ---------------- 渲染 ----------------
+// 6. 渲染邏輯
 function renderTree(nodes, container) {
     container.innerHTML = "";
     nodes.forEach((node) => {
-        let wrapper = document.createElement("div");
         let title = document.createElement("div");
         title.className = "nav-node";
         title.innerHTML = (node.children?.length > 0 ? "📂 " : "📄 ") + node.name;
-        
-        let childrenBox = document.createElement("div");
-        childrenBox.className = "child-container";
-        childrenBox.style.display = "none";
-
         title.onclick = (e) => {
             e.stopPropagation();
             document.querySelectorAll('.nav-node').forEach(el => el.classList.remove('active-node'));
             title.classList.add('active-node');
             activeNode = node;
             document.getElementById('current-path').innerText = `📍 目前路徑：${node.name}`;
-            
-            if (node.children?.length > 0) {
-                childrenBox.style.display = childrenBox.style.display === "none" ? "block" : "none";
-            } else {
-                renderDisplay(node.items || []);
-                if (window.innerWidth <= 1024) closeMenu();
-            }
+            renderDisplay(node.items || []);
+            if (window.innerWidth <= 1024) closeMenu();
         };
-
-        wrapper.appendChild(title);
-        if (node.children) {
-            renderTree(node.children, childrenBox);
-            wrapper.appendChild(childrenBox);
+        container.appendChild(title);
+        if (node.children && node.children.length > 0) {
+            let box = document.createElement("div");
+            box.className = "child-container";
+            renderTree(node.children, box);
+            container.appendChild(box);
         }
-        container.appendChild(wrapper);
     });
 }
 
 function renderDisplay(items) {
     const view = document.getElementById("display-view");
-    view.innerHTML = items.length === 0 ? '<div style="text-align:center; padding:50px; color:#999;">此分類暫無內容。</div>' : 
+    view.innerHTML = items.length === 0 ? '<div style="text-align:center; padding:50px; color:#999;">尚未加入內容。</div>' : 
     items.map((item, idx) => `
         <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h3 style="margin:0;">${item.name}</h3>
-                ${isAdmin ? `
-                    <div class="btn-group-row">
-                        <button class="btn btn-outline" onclick="startEdit(${idx})">✏</button>
-                        <button class="btn btn-danger" onclick="deleteItem(${idx})">🗑</button>
-                    </div>` : ''}
+                ${isAdmin ? `<button class="btn btn-outline" onclick="startEdit(${idx})">✏</button>` : ''}
             </div>
-            <div class="gallery">${(item.imgs || []).map(src => `<img class="gallery-img" src="${src}" onclick="window.open('${src}')">`).join('')}</div>
+            <div class="gallery">${(item.imgs || []).map(src => `<img class="gallery-img" src="${src}">`).join('')}</div>
             <p style="white-space: pre-wrap; margin-top:10px;">${item.text}</p>
         </div>`).join("");
 }
 
-function deleteItem(idx) {
-    if (confirm("確定刪除此條目？")) {
-        activeNode.items.splice(idx, 1);
-        save();
-        renderDisplay(activeNode.items);
-    }
-}
-
-function smartSearch() {
-    const q = document.getElementById("search-bar").value.toLowerCase();
-    if (!q) { if (activeNode) renderDisplay(activeNode.items); return; }
-    let res = [];
-    const s = (nodes) => nodes.forEach(n => {
-        if (n.items) n.items.forEach(i => { if (i.name.toLowerCase().includes(q) || i.text.toLowerCase().includes(q)) res.push(i); });
-        if (n.children) s(n.children);
-    });
-    s(db.categories);
-    renderDisplay(res);
-}
-
-// ---------------- 圖片管理 ----------------
+// 7. 圖片管理
 function addLocalImg(input) {
     const file = input.files[0];
     if (file && tempImgs.length < 5) {
@@ -265,20 +180,37 @@ function addLocalImg(input) {
     input.value = "";
 }
 
-function addUrlImg() {
-    const url = document.getElementById("input-url").value.trim();
-    if (url && tempImgs.length < 5) { tempImgs.push(url); renderImgManager(); }
-    document.getElementById("input-url").value = "";
-}
-
 function renderImgManager() {
     document.getElementById("img-manager-zone").innerHTML = tempImgs.map((img, idx) => `
         <div class="img-slot"><img src="${img}"><button class="btn-remove-img" onclick="tempImgs.splice(${idx},1);renderImgManager();">×</button></div>`).join("");
 }
 
-// ---------------- 初始化 ----------------
+// 8. 搜尋功能
+function smartSearch() {
+    const q = document.getElementById("search-bar").value.toLowerCase();
+    if (!q) { if (activeNode) renderDisplay(activeNode.items); return; }
+    let results = [];
+    const searchDeep = (nodes) => nodes.forEach(n => {
+        if (n.items) n.items.forEach(i => { if (i.name.toLowerCase().includes(q) || i.text.toLowerCase().includes(q)) results.push(i); });
+        if (n.children) searchDeep(n.children);
+    });
+    searchDeep(db.categories);
+    renderDisplay(results);
+}
+
+// 9. 進階設定
+function openModal() { document.getElementById("set-db-name").value = db.config.dbName; document.getElementById("settings-modal").style.display = "flex"; }
+function closeModal() { document.getElementById("settings-modal").style.display = "none"; }
+function saveSettings() {
+    const n = document.getElementById("set-db-name").value.trim();
+    const p = document.getElementById("set-new-pw").value.trim();
+    if (n) db.config.dbName = n;
+    if (p) db.config.password = p;
+    save(); location.reload();
+}
+
 window.onload = () => {
     document.getElementById("db-name-display").innerText = db.config.dbName;
     renderTree(db.categories, document.getElementById("nav-tree"));
-    setupGestures(); // 初始化手勢監聽
+    setupGestures();
 };
