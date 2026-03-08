@@ -1,5 +1,5 @@
 // --- 1. 配置與初始化 ---
-const API_URL = "https://script.google.com/macros/s/AKfycbwozdRPykXdobo-KhqnvajCBpTNDB2gH4g8MLQ_2RU62BV5-DWVHt4vtUzMe6C56vXbzQ/exec"; 
+const API_URL = "https://script.google.com/macros/s/AKfycbx_agjqCX1ipJybebKTVgx6V_S_Xxhh733fnioxkAFo-2bJAW32abD2uTkghh-q1cbM/exec"; 
 const STORAGE_KEY = "v6_knowledge_db";
 
 // 初始結構，防止讀取不到 config 而報錯
@@ -309,3 +309,4 @@ async function saveSettings() {
 
 // 系統啟動
 window.onload = initSystem;
+
