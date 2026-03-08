@@ -19,16 +19,16 @@
 </div>
 
 <div id="main-container">
-    <header>
+    <header id="top-header">
         <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
             <button onclick="toggleMenu()" class="mobile-only">☰</button>
             <input type="text" id="search-bar" placeholder="🔍 搜尋標題或內容..." oninput="smartSearch()">
         </div>
-        </header>
+    </header>
 
     <main id="content">
-        <div id="top-action-bar" style="margin-bottom: 15px;">
-            <button id="btn-settings" class="btn btn-outline" onclick="openModal()" style="display:none; width: 100%; border: 1px solid #ddd; background: #fff;">⚙ 系統進階設定</button>
+        <div id="settings-button-area" style="display:none; margin-bottom: 15px;">
+            <button id="btn-settings" class="btn btn-outline" onclick="openModal()" style="width: 100%; border: 1px solid #ddd; background: #fff; padding: 12px;">⚙ 系統進階設定</button>
         </div>
 
         <div id="display-view"></div>
@@ -39,7 +39,7 @@
                 <button class="btn btn-danger" onclick="exitAdmin()" style="padding: 5px 15px;">❌ 退出管理</button>
             </div>
             
-            <div id="current-path">📍 請選取左側選單路徑</div>
+            <div id="current-path" style="font-weight: bold; color: #3498db; margin-bottom: 10px;">📍 請選取路徑</div>
             
             <div class="btn-group-row">
                 <button class="btn btn-save" onclick="addRootCategory()" style="width:100%; margin-bottom:10px;">🌟 新增「第一層」總分類</button>
@@ -58,24 +58,18 @@
                 
                 <div class="form-group">
                     <label>📝 資訊內容</label>
-                    <textarea id="edit-desc" placeholder="請輸入詳細內容說明..." rows="10"></textarea>
+                    <textarea id="edit-desc" placeholder="請輸入詳細說明..." rows="8"></textarea>
                 </div>
                 
                 <div class="form-group">
-                    <label>🖼 圖片管理 (最多5張)</label>
-                    <div class="image-input-area">
-                        <input type="file" id="input-file" accept="image/*" onchange="addLocalImg(this)">
-                        <div class="url-input-group" style="display:flex; gap:5px; margin-top:5px;">
-                            <input type="text" id="input-url" placeholder="輸入網址...">
-                            <button class="btn btn-outline" onclick="addUrlImg()">新增</button>
-                        </div>
-                    </div>
+                    <label>🖼 圖片管理</label>
+                    <input type="file" id="input-file" accept="image/*" onchange="addLocalImg(this)">
                 </div>
                 <div id="img-manager-zone" class="img-manager"></div>
                 
                 <div class="btn-group-row" style="margin-top:20px; padding-bottom:30px;">
-                    <button id="btn-save-main" class="btn btn-save" onclick="saveContent()">💾 儲存內容</button>
-                    <button id="btn-cancel-edit" class="btn btn-outline" onclick="exitEdit()" style="display:none;">取消編輯</button>
+                    <button id="btn-save-main" class="btn btn-save" onclick="saveContent()" style="flex:2;">💾 儲存內容</button>
+                    <button id="btn-cancel-edit" class="btn btn-outline" onclick="exitEdit()" style="display:none; flex:1;">取消</button>
                 </div>
             </div>
         </div>
