@@ -20,10 +20,11 @@ const closeMenu = () => {
     document.getElementById("sidebar").classList.remove("open");
 };
 
-// 監聽側邊欄點擊：點擊內部選單後自動收回
+// 監聽側邊欄外部點擊收回
 document.getElementById("sidebar").addEventListener("click", (e) => {
-    if (window.innerWidth <= 1024 && !e.target.closest('#admin-toggle')) {
-        setTimeout(closeMenu, 150);
+    // 如果點擊的是分類名稱以外的地方（如背景），則收回選單
+    if (window.innerWidth <= 1024 && e.target.id === "sidebar") {
+        closeMenu();
     }
 });
 
@@ -48,7 +49,12 @@ function exitAdmin() {
     if(activeNode) renderDisplay(activeNode.items);
 }
 
-// --- 編輯功能 ---
+// --- 編輯與網址轉換功能 ---
+function linkify(text) {
+    const urlPattern = /(https?:\/\/[^\s]+)/g;
+    return text.replace(urlPattern, '<a href="$1" target="_blank" style="color:#3498db; text-decoration:underline;">$1</a>');
+}
+
 function exitEdit() {
     editingIdx = -1; 
     tempImgs = [];
@@ -79,7 +85,7 @@ function startEdit(idx) {
 }
 
 function saveContent() {
-    if (!activeNode) return alert("請先選擇分類");
+    if (!activeNode) return alert("請先選取分類");
     const name = document.getElementById("edit-title").value.trim();
     const text = document.getElementById("edit-desc").value.trim();
     if (!name) return alert("標題必填");
@@ -94,35 +100,62 @@ function saveContent() {
     exitEdit();
 }
 
-// --- 輔助函數：將文字中的網址轉為連結 ---
-function linkify(text) {
-    const urlPattern = /(https?:\/\/[^\s]+)/g;
-    return text.replace(urlPattern, '<a href="$1" target="_blank" style="color:#3498db; text-decoration:underline;">$1</a>');
-}
-
-// --- 渲染功能 ---
-function renderTree(nodes, container) {
+// --- 核心修正：分類樹摺疊渲染 ---
+function renderTree(nodes, container, level = 0) {
     container.innerHTML = "";
     nodes.forEach((node) => {
-        let title = document.createElement("div");
-        title.className = "nav-node";
-        title.innerHTML = (node.children?.length > 0 ? "📂 " : "📄 ") + node.name;
-        title.onclick = (e) => {
+        const hasChildren = node.children && node.children.length > 0;
+        
+        // 建立分類節點外殼
+        let nodeWrapper = document.createElement("div");
+        nodeWrapper.className = "nav-node-wrapper";
+        
+        // 建立標題列
+        let titleLine = document.createElement("div");
+        titleLine.className = "nav-node";
+        // 如果有子分類，顯示展開/收合圖示
+        const icon = hasChildren ? "📂 " : "📄 ";
+        titleLine.innerHTML = `<span>${icon}${node.name}</span>`;
+        
+        // 子分類容器
+        let childBox = document.createElement("div");
+        childBox.className = "child-container";
+        childBox.style.display = "none"; // 預設收合
+        
+        // 點擊事件邏輯
+        titleLine.onclick = (e) => {
             e.stopPropagation();
+            
+            // 1. 切換啟動樣式
             document.querySelectorAll('.nav-node').forEach(el => el.classList.remove('active-node'));
-            title.classList.add('active-node');
+            titleLine.classList.add('active-node');
+            
+            // 2. 切換摺疊狀態
+            if (hasChildren) {
+                const isExpanded = childBox.style.display === "block";
+                childBox.style.display = isExpanded ? "none" : "block";
+                titleLine.querySelector('span').innerText = (isExpanded ? "📂 " : "📂 ") + node.name;
+            }
+            
+            // 3. 載入內容
             activeNode = node;
             document.getElementById('current-path').innerText = `📍 定位：${node.name}`;
             renderDisplay(node.items || []);
-            if (window.innerWidth <= 1024) closeMenu();
+            
+            // 4. 如果是最終層級（無子分類），在手機端點擊後自動收回側邊欄
+            if (!hasChildren && window.innerWidth <= 1024) {
+                setTimeout(closeMenu, 200);
+            }
         };
-        container.appendChild(title);
-        if (node.children && node.children.length > 0) {
-            let box = document.createElement("div");
-            box.className = "child-container";
-            renderTree(node.children, box);
-            container.appendChild(box);
+        
+        nodeWrapper.appendChild(titleLine);
+        
+        if (hasChildren) {
+            renderTree(node.children, childBox, level + 1);
+            nodeWrapper.appendChild(childBox);
         }
+        
+        container.appendChild(nodeWrapper);
     });
 }
 
@@ -144,7 +177,7 @@ function renderDisplay(items) {
         </div>`).join("");
 }
 
-// --- 其他功能 (搜尋、增減分類、圖片、設定) ---
+// --- 其他管理功能 ---
 function smartSearch() {
     const q = document.getElementById("search-bar").value.toLowerCase();
     if (!q) { if (activeNode) renderDisplay(activeNode.items); return; }
