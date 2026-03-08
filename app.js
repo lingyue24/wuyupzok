@@ -1,7 +1,8 @@
-let db = JSON.parse(localStorage.getItem("v6_knowledge_db")) || {
-    config: { dbName: "我的企業知識庫", password: "1234" },
-    categories: [{ name: "💊 產品百科", children: [], items: [] }]
-};
+// 優先順序：1. 瀏覽器暫存 2. data.js 提供的初始資料 3. 最基本的空結構
+let db = JSON.parse(localStorage.getItem("v6_knowledge_db")) || (typeof initialData !== 'undefined' ? initialData : {
+    config: { dbName: "新知識庫", password: "1234" },
+    categories: []
+});
 
 let activeNode = null;
 let tempImgs = [];
@@ -237,3 +238,4 @@ window.onload = () => {
     renderTree(db.categories, document.getElementById("nav-tree"));
     setupGestures();
 };
+
