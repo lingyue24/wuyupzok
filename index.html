@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>V6.9 終極修正版</title>
+    <title>V6.9.1 旗艦知識管理系統</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -35,7 +35,7 @@
 
         <div id="admin-panel" style="display:none;" class="card">
             <div class="admin-header">
-                <h3>📂 分類與內容管理</h3>
+                <h3 style="margin:0;">📂 分類與內容管理</h3>
                 <button class="btn btn-danger" onclick="exitAdmin()">❌ 退出管理</button>
             </div>
             
@@ -45,10 +45,10 @@
                 <button class="btn btn-save" onclick="addRootCategory()" style="width:100%;">🌟 新增「第一層」總分類</button>
                 <button class="btn btn-accent" onclick="addCategory()" style="flex:1;">➕ 新增子分類</button>
                 <button class="btn btn-outline" onclick="renameCategory()" style="flex:1;">✏ 改名</button>
-                <button class="btn btn-danger" onclick="deleteCategory()" style="flex:1;">🗑 刪除</button>
+                <button class="btn btn-danger" onclick="deleteCategory()" style="flex:1;">🗑 刪除分類</button>
             </div>
 
-            <hr>
+            <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
 
             <div class="editor-form">
                 <div class="form-group">
@@ -57,7 +57,7 @@
                 </div>
                 <div class="form-group">
                     <label>📝 資訊內容</label>
-                    <textarea id="edit-desc" placeholder="請輸入內容..." rows="8"></textarea>
+                    <textarea id="edit-desc" placeholder="請輸入詳細內容..." rows="8"></textarea>
                 </div>
                 <div class="form-group">
                     <label>🖼 圖片管理</label>
@@ -67,7 +67,7 @@
                 
                 <div class="btn-group-row" style="margin-top:20px;">
                     <button id="btn-save-main" class="btn btn-save" style="flex:2;" onclick="saveContent()">💾 儲存內容</button>
-                    <button id="btn-cancel-edit" class="btn btn-outline" style="display:none; flex:1;" onclick="exitEdit()">取消</button>
+                    <button id="btn-cancel-edit" class="btn btn-outline" style="display:none; flex:1;" onclick="exitEdit()">取消編輯</button>
                 </div>
             </div>
         </div>
@@ -82,9 +82,9 @@
             <input type="text" id="set-db-name">
             <label>管理密碼</label>
             <input type="password" id="set-new-pw" placeholder="輸入新密碼">
-            <button class="btn btn-save" onclick="saveSettings()">更新設定</button>
+            <button class="btn btn-save" onclick="saveSettings()">更新系統設定</button>
             <div class="btn-group-row" style="margin-top:10px;">
-                <button class="btn btn-outline" onclick="exportDB()" style="flex:1">📦 備份</button>
+                <button class="btn btn-outline" onclick="exportDB()" style="flex:1">📦 備份匯出</button>
                 <button class="btn btn-outline" onclick="document.getElementById('import-f').click()" style="flex:1">📥 匯入</button>
             </div>
             <input type="file" id="import-f" hidden onchange="importDB(this)">
