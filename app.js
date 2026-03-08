@@ -10,26 +10,51 @@ let isAdmin = false;
 
 const save = () => localStorage.setItem("v6_knowledge_db", JSON.stringify(db));
 
-// 側邊欄控制
-function toggleMenu() { document.getElementById("sidebar").classList.toggle("open"); }
-function closeMenu() { document.getElementById("sidebar").classList.remove("open"); }
+// ---------------- 側邊欄控制與向左滑動收回 ----------------
+let touchStartX = 0;
 
-// 管理員模式控制
+function setupGestures() {
+    const sidebar = document.getElementById("sidebar");
+    
+    sidebar.addEventListener('touchstart', e => {
+        touchStartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+
+    sidebar.addEventListener('touchend', e => {
+        let touchEndX = e.changedTouches[0].screenX;
+        // 如果向左滑動距離超過 60px 則收回
+        if (touchStartX - touchEndX > 60) {
+            closeMenu();
+        }
+    }, { passive: true });
+}
+
+function toggleMenu() { 
+    document.getElementById("sidebar").classList.toggle("open"); 
+}
+
+function closeMenu() { 
+    document.getElementById("sidebar").classList.remove("open"); 
+}
+
+// ---------------- 管理員模式控制 ----------------
 function toggleAdmin() {
-    if (isAdmin) return exitAdmin(); // 若已是管理模式，點擊可直接退出
-    if (prompt("請輸入管理密碼:") === db.config.password) {
+    if (isAdmin) return exitAdmin();
+    const pw = prompt("請輸入管理密碼:");
+    if (pw === db.config.password) {
         isAdmin = true;
         document.getElementById("admin-panel").style.display = "block";
         document.getElementById("btn-settings").style.display = "block";
         document.getElementById("admin-toggle").innerText = "🔓 退出管理";
         if(activeNode) renderDisplay(activeNode.items);
+    } else if (pw !== null) {
+        alert("密碼錯誤");
     }
 }
 
-// 新增：退出編輯模式函數
 function exitAdmin() {
     isAdmin = false;
-    exitEdit(); // 清空編輯器內容
+    exitEdit();
     document.getElementById("admin-panel").style.display = "none";
     document.getElementById("btn-settings").style.display = "none";
     document.getElementById("admin-toggle").innerText = "🔐 管理模式";
@@ -51,6 +76,7 @@ function saveContent() {
     save();
     renderDisplay(activeNode.items);
     exitEdit();
+    alert("✅ 儲存成功並返回");
 }
 
 function exitEdit() {
@@ -92,7 +118,11 @@ function saveSettings() {
 
 function addRootCategory() {
     const name = prompt("輸入新的第一層分類名稱：");
-    if (name) { db.categories.push({ name, children: [], items: [] }); save(); renderTree(db.categories, document.getElementById("nav-tree")); }
+    if (name) { 
+        db.categories.push({ name, children: [], items: [] }); 
+        save(); 
+        renderTree(db.categories, document.getElementById("nav-tree")); 
+    }
 }
 
 function addCategory() {
@@ -106,28 +136,64 @@ function addCategory() {
     }
 }
 
+function deleteCategory() {
+    if (!activeNode) return;
+    if (db.categories.includes(activeNode) && db.categories.length <= 1) return alert("必須保留至少一個分類");
+    if (confirm(`確定刪除「${activeNode.name}」及其內容？`)) {
+        const remove = (arr) => {
+            const i = arr.findIndex(n => n === activeNode);
+            if (i > -1) { arr.splice(i, 1); return true; }
+            for (let c of arr) if (c.children && remove(c.children)) return true;
+            return false;
+        };
+        remove(db.categories);
+        activeNode = null;
+        save();
+        renderTree(db.categories, document.getElementById("nav-tree"));
+        document.getElementById("display-view").innerHTML = "";
+    }
+}
+
+function renameCategory() {
+    if (!activeNode) return;
+    const n = prompt("輸入新名稱：", activeNode.name);
+    if (n) { activeNode.name = n; save(); renderTree(db.categories, document.getElementById("nav-tree")); }
+}
+
 // ---------------- 渲染 ----------------
 function renderTree(nodes, container) {
     container.innerHTML = "";
     nodes.forEach((node) => {
+        let wrapper = document.createElement("div");
         let title = document.createElement("div");
         title.className = "nav-node";
         title.innerHTML = (node.children?.length > 0 ? "📂 " : "📄 ") + node.name;
+        
+        let childrenBox = document.createElement("div");
+        childrenBox.className = "child-container";
+        childrenBox.style.display = "none";
+
         title.onclick = (e) => {
             e.stopPropagation();
             document.querySelectorAll('.nav-node').forEach(el => el.classList.remove('active-node'));
             title.classList.add('active-node');
             activeNode = node;
             document.getElementById('current-path').innerText = `📍 目前路徑：${node.name}`;
-            if (!node.children?.length) { renderDisplay(node.items || []); if (window.innerWidth <= 1024) closeMenu(); }
+            
+            if (node.children?.length > 0) {
+                childrenBox.style.display = childrenBox.style.display === "none" ? "block" : "none";
+            } else {
+                renderDisplay(node.items || []);
+                if (window.innerWidth <= 1024) closeMenu();
+            }
         };
-        container.appendChild(title);
+
+        wrapper.appendChild(title);
         if (node.children) {
-            let box = document.createElement("div");
-            box.className = "child-container";
-            renderTree(node.children, box);
-            container.appendChild(box);
+            renderTree(node.children, childrenBox);
+            wrapper.appendChild(childrenBox);
         }
+        container.appendChild(wrapper);
     });
 }
 
@@ -138,12 +204,38 @@ function renderDisplay(items) {
         <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h3 style="margin:0;">${item.name}</h3>
-                ${isAdmin ? `<button class="btn btn-outline" onclick="startEdit(${idx})">✏</button>` : ''}
+                ${isAdmin ? `
+                    <div class="btn-group-row">
+                        <button class="btn btn-outline" onclick="startEdit(${idx})">✏</button>
+                        <button class="btn btn-danger" onclick="deleteItem(${idx})">🗑</button>
+                    </div>` : ''}
             </div>
+            <div class="gallery">${(item.imgs || []).map(src => `<img class="gallery-img" src="${src}" onclick="window.open('${src}')">`).join('')}</div>
             <p style="white-space: pre-wrap; margin-top:10px;">${item.text}</p>
         </div>`).join("");
 }
 
+function deleteItem(idx) {
+    if (confirm("確定刪除此條目？")) {
+        activeNode.items.splice(idx, 1);
+        save();
+        renderDisplay(activeNode.items);
+    }
+}
+
+function smartSearch() {
+    const q = document.getElementById("search-bar").value.toLowerCase();
+    if (!q) { if (activeNode) renderDisplay(activeNode.items); return; }
+    let res = [];
+    const s = (nodes) => nodes.forEach(n => {
+        if (n.items) n.items.forEach(i => { if (i.name.toLowerCase().includes(q) || i.text.toLowerCase().includes(q)) res.push(i); });
+        if (n.children) s(n.children);
+    });
+    s(db.categories);
+    renderDisplay(res);
+}
+
+// ---------------- 圖片管理 ----------------
 function addLocalImg(input) {
     const file = input.files[0];
     if (file && tempImgs.length < 5) {
@@ -154,12 +246,20 @@ function addLocalImg(input) {
     input.value = "";
 }
 
+function addUrlImg() {
+    const url = document.getElementById("input-url").value.trim();
+    if (url && tempImgs.length < 5) { tempImgs.push(url); renderImgManager(); }
+    document.getElementById("input-url").value = "";
+}
+
 function renderImgManager() {
     document.getElementById("img-manager-zone").innerHTML = tempImgs.map((img, idx) => `
         <div class="img-slot"><img src="${img}"><button class="btn-remove-img" onclick="tempImgs.splice(${idx},1);renderImgManager();">×</button></div>`).join("");
 }
 
+// ---------------- 初始化 ----------------
 window.onload = () => {
     document.getElementById("db-name-display").innerText = db.config.dbName;
     renderTree(db.categories, document.getElementById("nav-tree"));
+    setupGestures(); // 初始化手勢監聽
 };
