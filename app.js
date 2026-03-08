@@ -8,21 +8,30 @@ let tempImgs = [];
 let editingIdx = -1;
 let isAdmin = false;
 
-// --- 2. 雲端同步核心功能 ---
+// --- 2. 側邊欄收回核心邏輯 (修正重點) ---
 
-// 從 Google Sheets 讀取資料
+const toggleMenu = () => document.getElementById("sidebar").classList.toggle("open");
+const closeMenu = () => document.getElementById("sidebar").classList.remove("open");
+
+// 監聽全域點擊：點擊側邊欄以外的區域(main-container)自動收回
+document.getElementById("main-container").addEventListener("click", () => {
+    if (window.innerWidth <= 1024) closeMenu();
+});
+
+// --- 3. 雲端同步核心 ---
+
 async function loadFromCloud() {
     try {
         const response = await fetch(API_URL);
         const cloudData = await response.json();
         if (cloudData && cloudData.categories) {
             db = cloudData;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); // 備份到本地
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
             renderAfterLoad();
             console.log("雲端資料同步完成");
         }
     } catch (e) {
-        console.error("雲端讀取失敗，嘗試讀取本地快取", e);
+        console.error("雲端讀取失敗，讀取本地快取", e);
         const local = localStorage.getItem(STORAGE_KEY);
         if (local) {
             db = JSON.parse(local);
@@ -31,37 +40,99 @@ async function loadFromCloud() {
     }
 }
 
-// 寫入資料到 Google Sheets
 async function saveToCloud() {
     try {
-        // 先存本地，確保萬一網路斷線資料還在
         localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-        
         await fetch(API_URL, {
             method: "POST",
-            mode: "no-cors", // GAS 跨域安全性限制
+            mode: "no-cors",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(db)
         });
-        console.log("資料已指令發送至雲端");
+        console.log("已發送雲端儲存指令");
     } catch (e) {
-        console.error("雲端儲存失敗", e);
+        console.error("同步失敗", e);
     }
 }
 
 function renderAfterLoad() {
-    document.getElementById("db-name-display").innerText = db.config.dbName;
+    const nameDisplay = document.getElementById("db-name-display");
+    if(nameDisplay) nameDisplay.innerText = db.config.dbName;
     renderTree(db.categories, document.getElementById("nav-tree"));
 }
 
-// --- 3. UI 與 編輯功能 (承襲 V6.9.6) ---
+// --- 4. 樹狀選單渲染 (修正：自動收回邏輯) ---
 
-const toggleMenu = () => document.getElementById("sidebar").classList.toggle("open");
-const closeMenu = () => document.getElementById("sidebar").classList.remove("open");
+function renderTree(nodes, container) {
+    container.innerHTML = "";
+    nodes.forEach((node) => {
+        const hasChildren = node.children && node.children.length > 0;
+        let nodeWrapper = document.createElement("div");
+        nodeWrapper.className = "nav-node-wrapper";
+        
+        let titleLine = document.createElement("div");
+        titleLine.className = "nav-node";
+        titleLine.innerHTML = `<span>${hasChildren ? "📂 " : "📄 "}${node.name}</span>`;
+        
+        let childBox = document.createElement("div");
+        childBox.className = "child-container";
+        childBox.style.display = "none"; 
+        
+        titleLine.onclick = (e) => {
+            e.stopPropagation();
+            document.querySelectorAll('.nav-node').forEach(el => el.classList.remove('active-node'));
+            titleLine.classList.add('active-node');
 
-document.getElementById("sidebar").addEventListener("click", (e) => {
-    if (window.innerWidth <= 1024 && e.target.id === "sidebar") closeMenu();
-});
+            // 展開/收合子分類
+            if (hasChildren) {
+                childBox.style.display = childBox.style.display === "block" ? "none" : "block";
+            } else {
+                // 如果是最終條目 (📄)，點擊後在手機版自動收回
+                if (window.innerWidth <= 1024) {
+                    setTimeout(closeMenu, 150);
+                }
+            }
+            
+            activeNode = node;
+            const pathEl = document.getElementById('current-path');
+            if(pathEl) pathEl.innerText = `📍 定位：${node.name}`;
+            renderDisplay(node.items || []);
+        };
+        
+        nodeWrapper.appendChild(titleLine);
+        if (hasChildren) {
+            renderTree(node.children, childBox);
+            nodeWrapper.appendChild(childBox);
+        }
+        container.appendChild(nodeWrapper);
+    });
+}
+
+function renderDisplay(items) {
+    const view = document.getElementById("display-view");
+    if (!view) return;
+    if (items.length === 0) {
+        view.innerHTML = '<div style="text-align:center; padding:50px; color:#999;">此分類暫無內容。</div>';
+        return;
+    }
+    view.innerHTML = items.map((item, idx) => `
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h2 style="margin:0; font-size:1.2em;">${item.name}</h2>
+                ${isAdmin ? `<div><button class="btn btn-outline" onclick="startEdit(${idx})">✏</button>
+                <button class="btn btn-danger" onclick="deleteItem(${idx})" style="padding:5px 10px; margin-left:5px;">🗑</button></div>` : ''}
+            </div>
+            <div class="gallery">${(item.imgs || []).map(src => `<img src="${src}" onclick="window.open('${src}')">`).join('')}</div>
+            <p style="white-space: pre-wrap; line-height:1.7; margin-top:15px;">${linkify(item.text)}</p>
+        </div>`).join("");
+}
+
+// --- 5. 管理與編輯功能 ---
+
+function linkify(text) {
+    const urlPattern = /(https?:\/\/[^\s]+)/g;
+    return text.replace(urlPattern, '<a href="$1" target="_blank" style="color:#3498db; text-decoration:underline;">$1</a>');
+}
 
 function toggleAdmin() {
     if (isAdmin) return exitAdmin();
@@ -82,11 +153,6 @@ function exitAdmin() {
     document.getElementById("settings-area").style.display = "none";
     document.getElementById("admin-toggle").innerText = "🔐 管理模式";
     if(activeNode) renderDisplay(activeNode.items);
-}
-
-function linkify(text) {
-    const urlPattern = /(https?:\/\/[^\s]+)/g;
-    return text.replace(urlPattern, '<a href="$1" target="_blank" style="color:#3498db; text-decoration:underline;">$1</a>');
 }
 
 function exitEdit() {
@@ -125,73 +191,30 @@ async function saveContent() {
     else activeNode.items.push(newItem);
 
     renderDisplay(activeNode.items);
-    await saveToCloud(); // 呼叫同步
+    await saveToCloud();
     exitEdit();
 }
 
-// --- 4. 樹狀選單渲染 (支援摺疊) ---
-function renderTree(nodes, container) {
-    container.innerHTML = "";
-    nodes.forEach((node) => {
-        const hasChildren = node.children && node.children.length > 0;
-        let nodeWrapper = document.createElement("div");
-        nodeWrapper.className = "nav-node-wrapper";
-        
-        let titleLine = document.createElement("div");
-        titleLine.className = "nav-node";
-        titleLine.innerHTML = `<span>${hasChildren ? "📂 " : "📄 "}${node.name}</span>`;
-        
-        let childBox = document.createElement("div");
-        childBox.className = "child-container";
-        childBox.style.display = "none"; 
-        
-        titleLine.onclick = (e) => {
-            e.stopPropagation();
-            document.querySelectorAll('.nav-node').forEach(el => el.classList.remove('active-node'));
-            titleLine.classList.add('active-node');
-            if (hasChildren) childBox.style.display = childBox.style.display === "block" ? "none" : "block";
-            activeNode = node;
-            document.getElementById('current-path').innerText = `📍 定位：${node.name}`;
-            renderDisplay(node.items || []);
-            if (!hasChildren && window.innerWidth <= 1024) setTimeout(closeMenu, 200);
-        };
-        
-        nodeWrapper.appendChild(titleLine);
-        if (hasChildren) {
-            renderTree(node.children, childBox);
-            nodeWrapper.appendChild(childBox);
-        }
-        container.appendChild(nodeWrapper);
-    });
-}
+// --- 6. 其他分類管理功能 ---
 
-function renderDisplay(items) {
-    const view = document.getElementById("display-view");
-    view.innerHTML = items.length === 0 ? '<div style="text-align:center; padding:50px; color:#999;">此分類暫無內容。</div>' :
-    items.map((item, idx) => `
-        <div class="card">
-            <div style="display:flex; justify-content:space-between;">
-                <h2 style="margin:0;">${item.name}</h2>
-                ${isAdmin ? `<div><button class="btn btn-outline" onclick="startEdit(${idx})">✏</button>
-                <button class="btn btn-danger" onclick="deleteItem(${idx})" style="padding:5px; margin-left:5px;">🗑</button></div>` : ''}
-            </div>
-            <div class="gallery">${(item.imgs || []).map(src => `<img src="${src}" onclick="window.open('${src}')">`).join('')}</div>
-            <p style="white-space: pre-wrap; margin-top:15px;">${linkify(item.text)}</p>
-        </div>`).join("");
-}
-
-// --- 5. 管理輔助 (皆須呼叫 saveToCloud) ---
 async function addRootCategory() {
-    const name = prompt("名稱：");
+    const name = prompt("第一層分類名稱：");
     if (name) { db.categories.push({ name, children: [], items: [] }); renderTree(db.categories, document.getElementById("nav-tree")); await saveToCloud(); }
 }
+
 async function addCategory() {
-    if (!activeNode) return;
-    const name = prompt("子分類名稱：");
-    if (name) { if (!activeNode.children) activeNode.children = []; activeNode.children.push({ name, children: [], items: [] }); renderTree(db.categories, document.getElementById("nav-tree")); await saveToCloud(); }
+    if (!activeNode) return alert("請先選擇一個分類");
+    const name = prompt(`在「${activeNode.name}」下新增子分類：`);
+    if (name) {
+        if (!activeNode.children) activeNode.children = [];
+        activeNode.children.push({ name, children: [], items: [] });
+        renderTree(db.categories, document.getElementById("nav-tree"));
+        await saveToCloud();
+    }
 }
+
 async function deleteCategory() {
-    if (!activeNode || !confirm("確定刪除？")) return;
+    if (!activeNode || !confirm("確定刪除此分類？")) return;
     const remove = (arr) => {
         const idx = arr.findIndex(n => n === activeNode);
         if (idx > -1) { arr.splice(idx, 1); return true; }
@@ -200,8 +223,9 @@ async function deleteCategory() {
     };
     remove(db.categories); activeNode = null; await saveToCloud(); location.reload();
 }
+
 async function deleteItem(idx) {
-    if (confirm("刪除？")) { activeNode.items.splice(idx, 1); renderDisplay(activeNode.items); await saveToCloud(); }
+    if (confirm("確定刪除此內容？")) { activeNode.items.splice(idx, 1); renderDisplay(activeNode.items); await saveToCloud(); }
 }
 
 function smartSearch() {
@@ -215,7 +239,8 @@ function smartSearch() {
     search(db.categories); renderDisplay(res);
 }
 
-// --- 6. 圖片與設定 ---
+// --- 7. 圖片與設定 ---
+
 function addLocalImg(input) {
     const file = input.files[0];
     if (file && tempImgs.length < 5) {
@@ -224,13 +249,13 @@ function addLocalImg(input) {
         reader.readAsDataURL(file);
     }
 }
+
 function renderImgManager() {
     const zone = document.getElementById("img-manager-zone");
     if(!zone) return;
-    zone.innerHTML = tempImgs.map((img, idx) => `<div class="img-slot"><img src="${img}"><button onclick="tempImgs.splice(${idx},1);renderImgManager();" style="position:absolute; top:0; right:0; background:red; color:white; border:none;">×</button></div>`).join("");
+    zone.innerHTML = tempImgs.map((img, idx) => `
+        <div class="img-slot"><img src="${img}"><button onclick="tempImgs.splice(${idx},1);renderImgManager();" style="position:absolute; top:0; right:0; background:red; color:white; border:none; cursor:pointer;">×</button></div>`).join("");
 }
 
-// 初始化：啟動雲端同步
-window.onload = () => {
-    loadFromCloud();
-};
+const openModal = () => { document.getElementById("set-db-name").value = db.config.dbName; document.getElementById("settings-modal").style.display = "flex"; };
+const closeModal = () => document.getElementById("settings-modal").style.display
