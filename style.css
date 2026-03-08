@@ -9,6 +9,7 @@
 
 body { font-family: 'Segoe UI', "Microsoft JhengHei", sans-serif; margin: 0; display: flex; height: 100vh; background: var(--bg); color: #333; overflow: hidden; }
 
+/* Sidebar */
 #sidebar { width: var(--sidebar-w); background: var(--primary); color: white; display: flex; flex-direction: column; flex-shrink: 0; z-index: 2000; transition: transform 0.3s ease; }
 .sidebar-header { padding: 20px; border-bottom: 1px solid #3e5871; }
 #db-name-display { font-size: 1.1em; font-weight: bold; display: block; margin-bottom: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -19,33 +20,39 @@ body { font-family: 'Segoe UI', "Microsoft JhengHei", sans-serif; margin: 0; dis
 .active-node { background: var(--accent) !important; font-weight: bold; }
 .child-container { margin-left: 15px; border-left: 1px dashed rgba(255,255,255,0.2); }
 
-#main-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; width: 100%; }
-header { background: white; padding: 10px 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 10; }
-#search-bar { width: 250px; padding: 8px 15px; border-radius: 20px; border: 1px solid #ddd; outline: none; }
+/* Header 橫式佈局 */
+header { background: white; padding: 10px 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 10; gap: 10px; }
+#search-bar { width: 250px; padding: 8px 15px; border-radius: 20px; border: 1px solid #ddd; outline: none; transition: 0.3s; }
 
+#btn-settings { background: #34495e; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; white-space: nowrap; }
+#btn-settings:hover { background: #2c3e50; }
+
+#main-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; width: 100%; }
 #content { flex: 1; padding: 15px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 15px; }
 
+/* 手機版滑動與適應 */
 #sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1500; }
 .mobile-only { display: none; background: none; border: none; font-size: 24px; cursor: pointer; }
 
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
     .mobile-only { display: block; }
     #sidebar { position: fixed; left: 0; height: 100%; transform: translateX(-100%); }
     #sidebar.open { transform: translateX(0); }
     #sidebar.open ~ #sidebar-overlay { display: block; }
+    #search-bar { width: 100%; min-width: 100px; }
 }
 
+/* 編輯器與圖片 */
 .editor-form label { display: block; margin-top: 10px; font-weight: bold; font-size: 14px; }
 .editor-form input, .editor-form textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 5px; box-sizing: border-box; }
-
 .img-manager { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 8px; margin-top: 10px; }
-.img-slot { position: relative; border: 1px solid #ddd; border-radius: 6px; height: 70px; }
+.img-slot { position: relative; border: 1px solid #ddd; border-radius: 6px; height: 70px; overflow: hidden; }
 .img-slot img { width: 100%; height: 100%; object-fit: cover; }
-.btn-remove-img { position: absolute; top: 0; right: 0; background: var(--danger); color: white; border: none; cursor: pointer; }
+.btn-remove-img { position: absolute; top: 0; right: 0; background: var(--danger); color: white; border: none; cursor: pointer; padding: 2px 5px; font-size: 10px; }
 
 .gallery { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
-.gallery-img { height: 120px; border-radius: 6px; cursor: pointer; }
+.gallery-img { height: 120px; border-radius: 6px; cursor: pointer; border: 1px solid #eee; }
 
 .btn-group-row { display: flex; gap: 6px; flex-wrap: wrap; }
 .btn { border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; }
