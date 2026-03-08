@@ -7,7 +7,7 @@ let tempImgs = [];
 let editingIdx = -1;
 let isAdmin = false;
 
-// --- 初始化 ---
+// --- 1. 初始化與同步 ---
 async function initSystem() {
     const nameDisplay = document.getElementById("db-name-display");
     if(nameDisplay) nameDisplay.innerText = "連線中...";
@@ -31,35 +31,26 @@ function renderAfterLoad() {
     renderTree(db.categories, document.getElementById("nav-tree"));
 }
 
-// --- 搜尋功能 ---
+// --- 2. 搜尋功能 (保留遞迴邏輯) ---
 function smartSearch() {
     const q = document.getElementById("search-bar").value.toLowerCase();
-    const displayView = document.getElementById("display-view");
-    
     if (!q) {
         if (activeNode) renderDisplay(activeNode.items);
-        else displayView.innerHTML = '<div style="text-align:center; padding:50px; color:#999;">請選擇分類或搜尋</div>';
+        else document.getElementById("display-view").innerHTML = '<div style="text-align:center; padding:50px; color:#999;">請選擇分類或搜尋</div>';
         return;
     }
-
-    let results = [];
-    const searchDeep = (nodes) => {
-        nodes.forEach(n => {
-            if (n.items) {
-                n.items.forEach(item => {
-                    if (item.name.toLowerCase().includes(q) || item.text.toLowerCase().includes(q)) {
-                        results.push(item);
-                    }
-                });
-            }
-            if (n.children) searchDeep(n.children);
+    let res = [];
+    const searchRecursive = (nodes) => nodes.forEach(n => {
+        if (n.items) n.items.forEach(i => {
+            if (i.name.toLowerCase().includes(q) || i.text.toLowerCase().includes(q)) res.push(i);
         });
-    };
-    searchDeep(db.categories);
-    renderDisplay(results, true);
+        if (n.children) searchRecursive(n.children);
+    });
+    searchRecursive(db.categories);
+    renderDisplay(res, true);
 }
 
-// --- 內容渲染 ---
+// --- 3. 渲染內容 ---
 function renderDisplay(items, isSearch = false) {
     const view = document.getElementById("display-view");
     if(!view) return;
@@ -73,20 +64,14 @@ function renderDisplay(items, isSearch = false) {
                     <button class="btn btn-danger" onclick="deleteItem(${idx})" style="margin-left:5px;">🗑</button>
                 </div>` : ''}
             </div>
-            <div class="gallery">${(item.imgs || []).map(src => `<img src="${src}" onclick="window.open('${src}')">`).join('')}</div>
-            <p style="white-space: pre-wrap; line-height:1.6; margin-top:15px;">${item.text}</p>
+            <div class="gallery">${(item.imgs || []).map(src => `<img src="${src}" onclick="window.open('${src}')" style="max-width:200px; margin:5px; border-radius:5px; cursor:pointer;">`).join('')}</div>
+            <p style="white-space: pre-wrap; margin-top:15px;">${item.text}</p>
         </div>`).join("");
 }
 
-// --- 選單控制 ---
-function toggleMenu(e) {
-    if(e) e.stopPropagation();
-    document.getElementById("sidebar").classList.toggle("open");
-}
-
-function closeMenu() {
-    document.getElementById("sidebar").classList.remove("open");
-}
+// --- 4. 側邊欄與選單 ---
+function toggleMenu(e) { if(e) e.stopPropagation(); document.getElementById("sidebar").classList.toggle("open"); }
+function closeMenu() { document.getElementById("sidebar").classList.remove("open"); }
 
 function renderTree(nodes, container) {
     if(!container) return;
@@ -122,7 +107,7 @@ function renderTree(nodes, container) {
     });
 }
 
-// --- 管理模式 ---
+// --- 5. 管理與同步 ---
 function toggleAdmin() {
     if (isAdmin) {
         isAdmin = false;
@@ -141,12 +126,135 @@ function toggleAdmin() {
     if(activeNode) renderDisplay(activeNode.items);
 }
 
-// --- 備份功能 ---
+async function saveToCloud() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+    try {
+        await fetch(API_URL, { method: "POST", body: JSON.stringify(db) });
+    } catch (e) { console.error("同步失敗", e); }
+}
+
+async function saveContent() {
+    if (!activeNode) return alert("請先選分類");
+    const name = document.getElementById("edit-title").value;
+    const text = document.getElementById("edit-desc").value;
+    if(!name) return alert("請輸入標題");
+    
+    const item = { name, text, imgs: [...tempImgs] };
+    if (editingIdx > -1) activeNode.items[editingIdx] = item;
+    else activeNode.items.push(item);
+    
+    renderDisplay(activeNode.items);
+    await saveToCloud();
+    exitEdit();
+}
+
+function deleteItem(idx) {
+    if (confirm("確定刪除此條目？")) {
+        activeNode.items.splice(idx, 1);
+        renderDisplay(activeNode.items);
+        saveToCloud();
+    }
+}
+
+// --- 6. 編輯與圖片處理 ---
+function startEdit(idx) {
+    editingIdx = idx;
+    const item = activeNode.items[idx];
+    document.getElementById("edit-title").value = item.name;
+    document.getElementById("edit-desc").value = item.text;
+    tempImgs = [...(item.imgs || [])];
+    renderImgManager();
+    document.getElementById("btn-save-main").innerText = "🆙 更新並同步雲端";
+    document.getElementById("admin-panel").scrollIntoView({ behavior: "smooth" });
+}
+
+function exitEdit() {
+    editingIdx = -1; tempImgs = [];
+    document.getElementById("edit-title").value = "";
+    document.getElementById("edit-desc").value = "";
+    renderImgManager();
+    document.getElementById("btn-save-main").innerText = "💾 儲存並同步雲端";
+}
+
+// 修正 2：新增本機圖片上傳邏輯
+function uploadLocalImg(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        tempImgs.push(e.target.result);
+        renderImgManager();
+        input.value = ""; // 重置 input 方便下次選擇
+    };
+    reader.readAsDataURL(file);
+}
+
+function addImgByUrl() {
+    const url = document.getElementById("input-img-url").value;
+    if(url) { 
+        tempImgs.push(url); 
+        renderImgManager(); 
+        document.getElementById("input-img-url").value=""; 
+    }
+}
+
+function renderImgManager() {
+    const zone = document.getElementById("img-manager-zone");
+    zone.innerHTML = tempImgs.map((img, i) => `
+        <div class="img-slot">
+            <img src="${img}">
+            <button onclick="tempImgs.splice(${i},1);renderImgManager();">×</button>
+        </div>`).join("");
+}
+
+// --- 7. 分類操作補強 ---
+async function addRootCategory() {
+    const name = prompt("總分類名稱:");
+    if(name) { db.categories.push({name, children:[], items:[]}); renderAfterLoad(); await saveToCloud(); }
+}
+
+async function addCategory() {
+    if(!activeNode) return alert("請先點選一個分類");
+    const name = prompt(`在 "${activeNode.name}" 下新增子分類:`);
+    if(name) { 
+        if(!activeNode.children) activeNode.children=[]; 
+        activeNode.children.push({name, children:[], items:[]}); 
+        renderAfterLoad(); 
+        await saveToCloud(); 
+    }
+}
+
+// 修正 1：補回刪除分類邏輯
+async function deleteCategory() {
+    if(!activeNode) return alert("請選取要刪除的分類");
+    if(!confirm(`確定要刪除分類「${activeNode.name}」及其所有內容嗎？此操作無法復原。`)) return;
+    
+    const removeNode = (list) => {
+        for (let i = 0; i < list.length; i++) {
+            if (list[i] === activeNode) {
+                list.splice(i, 1);
+                return true;
+            }
+            if (list[i].children && removeNode(list[i].children)) return true;
+        }
+        return false;
+    };
+
+    if (removeNode(db.categories)) {
+        activeNode = null;
+        document.getElementById('current-path').innerText = "📍 請選取分類路徑";
+        document.getElementById("display-view").innerHTML = "";
+        renderAfterLoad();
+        await saveToCloud();
+    }
+}
+
+// --- 8. 系統設定與備份 ---
 function exportDB() {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 2));
     const dlAnchor = document.createElement('a');
     dlAnchor.setAttribute("href", dataStr);
-    dlAnchor.setAttribute("download", `backup_${new Date().getTime()}.json`);
+    dlAnchor.setAttribute("download", `knowledge_backup_${new Date().toLocaleDateString()}.json`);
     document.body.appendChild(dlAnchor);
     dlAnchor.click();
     dlAnchor.remove();
@@ -161,89 +269,23 @@ function importDB(input) {
             db = JSON.parse(e.target.result);
             await saveToCloud();
             location.reload();
-        } catch (err) { alert("匯入失敗"); }
+        } catch (err) { alert("檔案格式錯誤"); }
     };
     reader.readAsText(file);
 }
 
-// --- 資料儲存 ---
-async function saveToCloud() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-    try {
-        await fetch(API_URL, { method: "POST", body: JSON.stringify(db) });
-    } catch (e) { console.error("雲端同步失敗"); }
-}
+const openModal = () => {
+    // 修正 4：回填資料庫名稱
+    document.getElementById("set-db-name").value = db.config.dbName || "";
+    document.getElementById("settings-modal").style.display = "flex";
+};
 
-async function saveContent() {
-    if (!activeNode) return alert("請先選分類");
-    const name = document.getElementById("edit-title").value;
-    const text = document.getElementById("edit-desc").value;
-    const item = { name, text, imgs: [...tempImgs] };
-    if (editingIdx > -1) activeNode.items[editingIdx] = item;
-    else activeNode.items.push(item);
-    renderDisplay(activeNode.items);
-    await saveToCloud();
-    exitEdit();
-}
-
-function deleteItem(idx) {
-    if (confirm("確定刪除此條目？")) {
-        activeNode.items.splice(idx, 1);
-        renderDisplay(activeNode.items);
-        saveToCloud();
-    }
-}
-
-function startEdit(idx) {
-    editingIdx = idx;
-    const item = activeNode.items[idx];
-    document.getElementById("edit-title").value = item.name;
-    document.getElementById("edit-desc").value = item.text;
-    tempImgs = [...(item.imgs || [])];
-    renderImgManager();
-    document.getElementById("btn-save-main").innerText = "🆙 更新內容";
-    window.scrollTo({ top: document.getElementById('admin-panel').offsetTop, behavior: 'smooth' });
-}
-
-function exitEdit() {
-    editingIdx = -1; tempImgs = [];
-    document.getElementById("edit-title").value = "";
-    document.getElementById("edit-desc").value = "";
-    renderImgManager();
-    document.getElementById("btn-save-main").innerText = "💾 儲存內容";
-}
-
-function addImgByUrl() {
-    const url = document.getElementById("input-img-url").value;
-    if(url) { tempImgs.push(url); renderImgManager(); document.getElementById("input-img-url").value=""; }
-}
-
-function renderImgManager() {
-    const zone = document.getElementById("img-manager-zone");
-    zone.innerHTML = tempImgs.map((img, i) => `
-        <div class="img-slot">
-            <img src="${img}">
-            <button onclick="tempImgs.splice(${i},1);renderImgManager();">×</button>
-        </div>`).join("");
-}
-
-// --- 分類操作 ---
-async function addRootCategory() {
-    const name = prompt("名稱:");
-    if(name) { db.categories.push({name, children:[], items:[]}); renderAfterLoad(); await saveToCloud(); }
-}
-async function addCategory() {
-    if(!activeNode) return;
-    const name = prompt("子分類名稱:");
-    if(name) { if(!activeNode.children) activeNode.children=[]; activeNode.children.push({name, children:[], items:[]}); renderAfterLoad(); await saveToCloud(); }
-}
-
-const openModal = () => document.getElementById("settings-modal").style.display = "flex";
 const closeModal = () => document.getElementById("settings-modal").style.display = "none";
 
 async function saveSettings() {
-    db.config.dbName = document.getElementById("set-db-name").value;
+    const newName = document.getElementById("set-db-name").value;
     const newPw = document.getElementById("set-new-pw").value;
+    if(newName) db.config.dbName = newName;
     if(newPw) db.config.password = newPw;
     await saveToCloud();
     location.reload();
