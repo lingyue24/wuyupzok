@@ -17,7 +17,6 @@ body {
     overflow: hidden; 
 }
 
-/* 側邊欄強化 */
 #sidebar { 
     width: var(--sidebar-w); 
     background: var(--primary); 
@@ -36,7 +35,6 @@ body {
 .active-node { background: var(--accent) !important; font-weight: bold; }
 .child-container { margin-left: 15px; border-left: 1px dashed rgba(255,255,255,0.2); }
 
-/* 主佈局：Header 隔離 */
 #main-container { 
     flex: 1; 
     display: flex; 
@@ -50,7 +48,7 @@ header {
     padding: 10px 15px; 
     box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
     z-index: 1000; 
-    flex-shrink: 0; /* 禁止 Header 被擠出畫面 */
+    flex-shrink: 0; 
 }
 .header-content { display: flex; align-items: center; gap: 10px; }
 #search-bar { flex: 1; padding: 12px 15px; border-radius: 20px; border: 1px solid #ddd; outline: none; font-size: 16px; }
@@ -62,7 +60,6 @@ header {
     -webkit-overflow-scrolling: touch; 
 }
 
-/* 遮罩與手機適配 */
 #sidebar-overlay { 
     display: none; 
     position: fixed; 
@@ -76,29 +73,24 @@ header {
 @media (max-width: 1024px) {
     #sidebar { position: fixed; left: 0; transform: translateX(-100%); }
     #sidebar.open { transform: translateX(0); }
-    #sidebar.open ~ #sidebar-overlay { display: block; }
+    /* 修正：當 sidebar 開啟時，顯示遮罩 */
+    #sidebar.open + #sidebar-overlay { display: block !important; }
 }
 
-/* 卡片與元件樣式 */
 .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 15px; }
 .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
 #current-path { font-weight: bold; color: var(--accent); margin-bottom: 10px; font-size: 14px; }
 .form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; }
 .editor-form input, .editor-form textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
-
 .btn-group-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .btn { border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; }
 .btn-save { background: var(--success); color: white; }
 .btn-accent { background: var(--accent); color: white; }
 .btn-danger { background: var(--danger); color: white; }
 .btn-outline { background: #eee; color: #333; }
-
-/* 圖片顯示 */
 .img-manager { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 10px; margin-top: 10px; }
 .img-slot { position: relative; height: 60px; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
 .img-slot img { width: 100%; height: 100%; object-fit: cover; }
 .gallery img { width: 100%; border-radius: 8px; margin-top: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-
-/* Modal */
 .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 4000; justify-content: center; align-items: center; }
 .modal-content { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; }
