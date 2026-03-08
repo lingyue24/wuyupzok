@@ -91,11 +91,6 @@
             <label>管理密碼</label>
             <input type="password" id="set-new-pw" placeholder="輸入新密碼">
             <button class="btn btn-save" onclick="saveSettings()">更新設定</button>
-            <div class="btn-group-row" style="margin-top:15px;">
-                <button class="btn btn-outline" onclick="exportDB()" style="flex:1">📦 備份匯出</button>
-                <button class="btn btn-outline" onclick="document.getElementById('import-f').click()" style="flex:1">📥 匯入</button>
-            </div>
-            <input type="file" id="import-f" hidden onchange="importDB(this)">
             <button class="btn btn-outline" style="width:100%; margin-top:10px;" onclick="closeModal()">關閉</button>
         </div>
     </div>
