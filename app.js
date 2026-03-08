@@ -10,50 +10,33 @@ let isAdmin = false;
 
 const save = () => localStorage.setItem("v6_knowledge_db", JSON.stringify(db));
 
-// 側邊欄手勢偵測
-let touchStartX = 0;
-const sidebar = document.getElementById("sidebar");
-sidebar.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, false);
-sidebar.addEventListener('touchend', e => {
-    if (touchStartX - e.changedTouches[0].screenX > 50) closeMenu();
-}, false);
-
+// 側邊欄控制
 function toggleMenu() { document.getElementById("sidebar").classList.toggle("open"); }
 function closeMenu() { document.getElementById("sidebar").classList.remove("open"); }
 
-// 設定功能
-function openModal() { 
-    document.getElementById("set-db-name").value = db.config.dbName; 
-    document.getElementById("settings-modal").style.display = "flex"; 
-}
-function closeModal() { document.getElementById("settings-modal").style.display = "none"; }
-
-function saveSettings() {
-    const newName = document.getElementById("set-db-name").value.trim();
-    const newPw = document.getElementById("set-new-pw").value.trim();
-    if (newName) db.config.dbName = newName;
-    if (newPw) db.config.password = newPw;
-    save();
-    location.reload();
-}
-
-// 分類與內容管理
-function addRootCategory() {
-    const name = prompt("輸入新的第一層分類名稱：");
-    if (name) { db.categories.push({ name, children: [], items: [] }); save(); renderTree(db.categories, document.getElementById("nav-tree")); }
-}
-
-function addCategory() {
-    if (!activeNode) return alert("請先選取分類");
-    const name = prompt(`在「${activeNode.name}」下新增子分類：`);
-    if (name) {
-        if (!activeNode.children) activeNode.children = [];
-        activeNode.children.push({ name, children: [], items: [] });
-        save();
-        renderTree(db.categories, document.getElementById("nav-tree"));
+// 管理員模式控制
+function toggleAdmin() {
+    if (isAdmin) return exitAdmin(); // 若已是管理模式，點擊可直接退出
+    if (prompt("請輸入管理密碼:") === db.config.password) {
+        isAdmin = true;
+        document.getElementById("admin-panel").style.display = "block";
+        document.getElementById("btn-settings").style.display = "block";
+        document.getElementById("admin-toggle").innerText = "🔓 退出管理";
+        if(activeNode) renderDisplay(activeNode.items);
     }
 }
 
+// 新增：退出編輯模式函數
+function exitAdmin() {
+    isAdmin = false;
+    exitEdit(); // 清空編輯器內容
+    document.getElementById("admin-panel").style.display = "none";
+    document.getElementById("btn-settings").style.display = "none";
+    document.getElementById("admin-toggle").innerText = "🔐 管理模式";
+    if(activeNode) renderDisplay(activeNode.items);
+}
+
+// ---------------- 內容編輯邏輯 ----------------
 function saveContent() {
     if (!activeNode) return alert("請選取分類路徑");
     const name = document.getElementById("edit-title").value.trim();
@@ -91,7 +74,39 @@ function startEdit(idx) {
     document.getElementById("admin-panel").scrollIntoView({ behavior: 'smooth' });
 }
 
-// 渲染與其他功能 (與原版邏輯一致)
+// ---------------- 系統設定與分類 ----------------
+function openModal() { 
+    document.getElementById("set-db-name").value = db.config.dbName; 
+    document.getElementById("settings-modal").style.display = "flex"; 
+}
+function closeModal() { document.getElementById("settings-modal").style.display = "none"; }
+
+function saveSettings() {
+    const newName = document.getElementById("set-db-name").value.trim();
+    const newPw = document.getElementById("set-new-pw").value.trim();
+    if (newName) db.config.dbName = newName;
+    if (newPw) db.config.password = newPw;
+    save();
+    location.reload();
+}
+
+function addRootCategory() {
+    const name = prompt("輸入新的第一層分類名稱：");
+    if (name) { db.categories.push({ name, children: [], items: [] }); save(); renderTree(db.categories, document.getElementById("nav-tree")); }
+}
+
+function addCategory() {
+    if (!activeNode) return alert("請選取分類");
+    const name = prompt(`在「${activeNode.name}」下新增子分類：`);
+    if (name) {
+        if (!activeNode.children) activeNode.children = [];
+        activeNode.children.push({ name, children: [], items: [] });
+        save();
+        renderTree(db.categories, document.getElementById("nav-tree"));
+    }
+}
+
+// ---------------- 渲染 ----------------
 function renderTree(nodes, container) {
     container.innerHTML = "";
     nodes.forEach((node) => {
@@ -121,21 +136,12 @@ function renderDisplay(items) {
     view.innerHTML = items.length === 0 ? '<div style="text-align:center; padding:50px; color:#999;">此分類暫無內容。</div>' : 
     items.map((item, idx) => `
         <div class="card">
-            <div style="display:flex; justify-content:space-between;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h3 style="margin:0;">${item.name}</h3>
                 ${isAdmin ? `<button class="btn btn-outline" onclick="startEdit(${idx})">✏</button>` : ''}
             </div>
             <p style="white-space: pre-wrap; margin-top:10px;">${item.text}</p>
         </div>`).join("");
-}
-
-function toggleAdmin() {
-    if (prompt("請輸入密碼:") === db.config.password) {
-        isAdmin = true;
-        document.getElementById("admin-panel").style.display = "block";
-        document.getElementById("btn-settings").style.display = "block";
-        document.getElementById("admin-toggle").innerText = "✅ 已管理模式";
-    }
 }
 
 function addLocalImg(input) {
