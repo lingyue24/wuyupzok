@@ -32,12 +32,13 @@
 
         <div id="admin-panel" style="display:none;" class="card">
             <h3 style="margin-top:0;">📂 分類與內容管理</h3>
-            <div id="current-path">📍 請選取左側選單路徑</div>
+            <div id="current-path" style="margin-bottom:10px; color:var(--accent); font-weight:bold;">📍 請選取左側選單路徑</div>
             
             <div class="btn-group-row">
-                <button class="btn btn-accent" onclick="addCategory()">➕ 新子分類</button>
-                <button class="btn btn-outline" onclick="renameCategory()">✏ 分類改名</button>
-                <button class="btn btn-danger" onclick="deleteCategory()">🗑 刪除分類</button>
+                <button class="btn btn-save" onclick="addRootCategory()" style="width:100%; margin-bottom:10px;">🌟 新增「第一層」總分類</button>
+                <button class="btn btn-accent" onclick="addCategory()" style="flex:1;">➕ 新增子分類</button>
+                <button class="btn btn-outline" onclick="renameCategory()" style="flex:1;">✏ 改名</button>
+                <button class="btn btn-danger" onclick="deleteCategory()" style="flex:1;">🗑 刪除分類</button>
             </div>
 
             <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
@@ -52,14 +53,14 @@
                 <label>🖼 圖片管理 (最多5張)</label>
                 <div class="image-input-area">
                     <input type="file" id="input-file" accept="image/*" onchange="addLocalImg(this)">
-                    <div class="url-input-group">
-                        <input type="text" id="input-url" placeholder="輸入圖片網址...">
-                        <button onclick="addUrlImg()">新增</button>
+                    <div class="url-input-group" style="display:flex; gap:5px; margin-top:5px;">
+                        <input type="text" id="input-url" placeholder="輸入圖片網址..." style="flex:1;">
+                        <button class="btn btn-outline" onclick="addUrlImg()">新增</button>
                     </div>
                 </div>
                 <div id="img-manager-zone" class="img-manager"></div>
                 
-                <div class="btn-group-row" style="margin-top:20px;">
+                <div class="btn-group-row" style="margin-top:20px; padding-bottom:30px;">
                     <button id="btn-save-main" class="btn btn-save" onclick="saveContent()">💾 儲存內容</button>
                     <button id="btn-cancel-edit" class="btn btn-outline" onclick="exitEdit()" style="display:none;">取消編輯</button>
                 </div>
