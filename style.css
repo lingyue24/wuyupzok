@@ -7,81 +7,68 @@
     --sidebar-w: 280px;
 }
 
-/* 移除 body 的 overflow: hidden 以免鎖死全域滾動 */
-body { 
-    font-family: 'Segoe UI', "Microsoft JhengHei", sans-serif; 
-    margin: 0; 
-    display: flex; 
-    height: 100vh; 
-    background: var(--bg); 
-    color: #333; 
-}
+/* 核心佈局修正 */
+* { box-sizing: border-box; }
+body { font-family: 'Segoe UI', "Microsoft JhengHei", sans-serif; margin: 0; display: flex; height: 100vh; background: var(--bg); color: #333; overflow: hidden; }
 
-/* 側邊欄 */
+/* Sidebar */
 #sidebar { 
-    width: var(--sidebar-w); 
-    background: var(--primary); 
-    color: white; 
-    display: flex; 
-    flex-direction: column; 
-    flex-shrink: 0; 
-    z-index: 2000; 
-    transition: transform 0.3s ease;
+    width: var(--sidebar-w); background: var(--primary); color: white; 
+    display: flex; flex-direction: column; flex-shrink: 0; z-index: 2000; 
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+.sidebar-header { padding: 20px; border-bottom: 1px solid #3e5871; }
+#nav-tree { flex: 1; overflow-y: auto; padding: 10px; }
+.nav-node { padding: 12px; cursor: pointer; border-radius: 6px; font-size: 14px; margin-bottom: 2px; }
+.active-node { background: var(--accent) !important; font-weight: bold; }
+.child-container { margin-left: 15px; border-left: 1px dashed rgba(255,255,255,0.2); }
 
-#main-container { 
-    flex: 1; 
-    display: flex; 
-    flex-direction: column; 
-    min-width: 0; /* 防止彈性盒子溢出 */
-    height: 100vh;
-}
+/* Main Container & Header */
+#main-container { flex: 1; display: flex; flex-direction: column; height: 100vh; min-width: 0; }
+header { background: white; padding: 10px 15px; display: flex; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 10; flex-shrink: 0; }
+#search-bar { flex: 1; padding: 10px 15px; border-radius: 20px; border: 1px solid #ddd; outline: none; font-size: 16px; }
 
-header { 
-    background: white; 
-    padding: 10px 15px; 
-    display: flex; 
-    align-items: center; 
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
-    z-index: 10; 
-    flex-shrink: 0;
-}
-
-/* 關鍵修復：主內容區域必須設為可滾動，並允許觸控滾動 */
+/* Content Area - 這是修復滾動的關鍵 */
 #content { 
-    flex: 1; 
-    padding: 15px; 
-    overflow-y: auto; 
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch; /* iOS 順暢滾動支援 */
+    flex: 1; padding: 15px; overflow-y: auto; overflow-x: hidden; 
+    -webkit-overflow-scrolling: touch; 
 }
 
-/* 編輯表單與欄位 */
+/* 橫式寬幅按鈕 */
+#btn-settings { width: 100%; background: #34495e; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+
+/* Editor Form */
 .form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; }
-.editor-form textarea { 
-    width: 100%; 
-    height: 300px; /* 增加高度 */
-    padding: 12px; 
-    border: 1px solid #ccc; 
-    border-radius: 6px; 
-    box-sizing: border-box; 
-    font-size: 16px;
-}
+.editor-form label { font-weight: bold; color: var(--primary); }
+.editor-form input, .editor-form textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+.editor-form textarea { height: 300px; line-height: 1.6; resize: vertical; }
 
-#btn-settings { width: 100%; background: #34495e; color: white; border: none; padding: 12px; border-radius: 8px; margin-bottom: 10px; font-weight: bold; }
+/* 圖片顯示與管理 */
+.gallery { display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; }
+.gallery-img { height: 120px; border-radius: 8px; object-fit: cover; }
+.img-manager { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; margin-top: 10px; }
+.img-slot { position: relative; height: 80px; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
+.img-slot img { width: 100%; height: 100%; object-fit: cover; }
+.btn-remove-img { position: absolute; top: 0; right: 0; background: var(--danger); color: white; border: none; padding: 2px 6px; cursor: pointer; }
 
-/* 其他樣式保持不變... */
-.card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
+/* 其他樣式 */
+.card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 15px; }
+.btn-group-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .btn { border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; }
 .btn-save { background: var(--success); color: white; }
+.btn-accent { background: var(--accent); color: white; }
 .btn-danger { background: var(--danger); color: white; }
 .btn-outline { background: #eee; color: #333; }
 
+/* Mobile Adaption */
 #sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1500; }
-.mobile-only { background: none; border: none; font-size: 24px; cursor: pointer; }
+.mobile-only { background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 5px; }
 
 @media (max-width: 1024px) {
     #sidebar { position: fixed; left: 0; height: 100%; transform: translateX(-100%); }
     #sidebar.open { transform: translateX(0); }
     #sidebar.open ~ #sidebar-overlay { display: block; }
 }
+
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 3000; justify-content: center; align-items: center; }
+.modal-content { background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; }
