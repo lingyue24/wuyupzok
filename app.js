@@ -23,9 +23,9 @@ sidebar.addEventListener('touchend', e => {
 function toggleMenu() { document.getElementById("sidebar").classList.toggle("open"); }
 function closeMenu() { document.getElementById("sidebar").classList.remove("open"); }
 
-// ---------------- 系統設定彈窗 (含預載名稱) ----------------
+// ---------------- 系統設定彈窗 (預載名稱修正) ----------------
 function openModal() { 
-    // 預載目前資料庫名稱
+    // 進入彈窗時，將當前的資料庫名稱放入輸入框
     document.getElementById("set-db-name").value = db.config.dbName; 
     document.getElementById("settings-modal").style.display = "flex"; 
 }
@@ -224,12 +224,13 @@ function renderImgManager() {
         </div>`).join("");
 }
 
+// ---------------- 管理模式開關 ----------------
 function toggleAdmin() {
-    const pw = prompt("請輸入密碼:");
+    const pw = prompt("請輸入管理密碼:");
     if (pw === db.config.password) {
         isAdmin = true;
         document.getElementById("admin-panel").style.display = "block";
-        document.getElementById("btn-settings").style.display = "block";
+        document.getElementById("btn-settings").style.display = "block"; // 顯示搜尋欄下的按鈕
         document.getElementById("admin-toggle").innerText = "✅ 已管理";
         if(activeNode) renderDisplay(activeNode.items);
     }
@@ -267,3 +268,4 @@ window.onload = () => {
     document.getElementById("db-name-display").innerText = db.config.dbName;
     renderTree(db.categories, document.getElementById("nav-tree"));
 };
+
