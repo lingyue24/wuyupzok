@@ -72,7 +72,7 @@ function renderImgManager() {
         </div>`).join("");
 }
 
-// --- 4. 介面渲染與導覽 (修正手機選單開關) ---
+// --- 4. 介面渲染與導覽 ---
 function toggleMenu() {
     const sb = document.getElementById("sidebar");
     if (sb) sb.classList.toggle("open");
@@ -167,6 +167,7 @@ function exitEdit() {
     document.getElementById("edit-desc").value = "";
     renderImgManager();
     document.getElementById("btn-save-main").innerText = "💾 儲存並同步雲端";
+    document.getElementById("btn-cancel-edit").style.display = "none";
 }
 
 function startEdit(idx) {
@@ -177,6 +178,7 @@ function startEdit(idx) {
     tempImgs = [...(item.imgs || [])];
     renderImgManager();
     document.getElementById("btn-save-main").innerText = "🆙 更新內容";
+    document.getElementById("btn-cancel-edit").style.display = "inline-block";
     window.scrollTo({ top: document.getElementById('admin-panel').offsetTop, behavior: 'smooth' });
 }
 
@@ -253,7 +255,41 @@ async function deleteItem(idx) {
     }
 }
 
-// --- 7. 搜尋與設定 ---
+// --- 7. 備份匯出與匯入功能 ---
+function exportDB() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `knowledge_backup_${new Date().toLocaleDateString()}.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+}
+
+function importDB(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const imported = JSON.parse(e.target.result);
+            if (imported.config && imported.categories) {
+                if (confirm("匯入將覆蓋現有所有雲端資料，確定嗎？")) {
+                    db = imported;
+                    await saveToCloud();
+                    location.reload();
+                }
+            } else {
+                alert("無效的備份檔案格式");
+            }
+        } catch (err) {
+            alert("讀取檔案失敗：" + err);
+        }
+    };
+    reader.readAsText(file);
+}
+
+// --- 8. 搜尋與設定 ---
 function smartSearch() {
     const q = document.getElementById("search-bar").value.toLowerCase();
     if (!q) { if (activeNode) renderDisplay(activeNode.items); return; }
@@ -279,7 +315,7 @@ async function saveSettings() {
     const p = document.getElementById("set-new-pw").value.trim();
     if (n) db.config.dbName = n;
     if (p) db.config.password = p;
-    await saveToCloud();
+    await saveToCloud(); 
     location.reload();
 }
 
