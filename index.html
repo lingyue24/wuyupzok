@@ -20,14 +20,17 @@
 
 <div id="main-container">
     <header>
-        <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+        <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
             <button onclick="toggleMenu()" class="mobile-only">☰</button>
             <input type="text" id="search-bar" placeholder="🔍 搜尋標題或內容..." oninput="smartSearch()">
         </div>
-        <button id="btn-settings" onclick="openModal()" style="display:none;">⚙ 設定</button>
     </header>
 
     <main id="content">
+        <div id="settings-row" style="margin-bottom: 15px;">
+            <button id="btn-settings" onclick="openModal()" style="display:none;">⚙ 系統進階設定</button>
+        </div>
+
         <div id="display-view"></div>
 
         <div id="admin-panel" style="display:none;" class="card">
@@ -76,7 +79,7 @@
             <label>資料庫顯示名稱</label>
             <input type="text" id="set-db-name">
             <label>管理密碼</label>
-            <input type="password" id="set-new-pw" placeholder="輸入新密碼 (不改請留空)">
+            <input type="password" id="set-new-pw" placeholder="輸入新密碼">
             <button class="btn btn-save" onclick="saveSettings()">更新設定</button>
             <div class="btn-group-row" style="margin-top:15px;">
                 <button class="btn btn-outline" onclick="exportDB()" style="flex:1">📦 備份匯出</button>
