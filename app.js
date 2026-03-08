@@ -88,6 +88,7 @@ function exitEdit() {
     document.getElementById("btn-cancel-edit").style.display = "none";
 }
 
+// 修改：開始編輯時，自動滾動到編輯區域最下方
 function startEdit(idx) {
     editingIdx = idx;
     const item = activeNode.items[idx];
@@ -95,9 +96,27 @@ function startEdit(idx) {
     document.getElementById("edit-desc").value = item.text;
     tempImgs = [...(item.imgs || [])];
     renderImgManager();
+    
     document.getElementById("btn-save-main").innerText = "🆙 更新內容";
     document.getElementById("btn-cancel-edit").style.display = "block";
-    document.getElementById("admin-panel").scrollIntoView({ behavior: 'smooth' });
+    
+    // 自動滾動到編輯面板
+    setTimeout(() => {
+        document.getElementById("admin-panel").scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+}
+
+// 修改：當側邊欄開啟時，暫時禁止主頁面滾動（僅手機版）
+function toggleMenu() { 
+    const isOpening = !document.getElementById("sidebar").classList.contains("open");
+    document.getElementById("sidebar").classList.toggle("open");
+    // 如果開啟選單，鎖定背景；關閉則恢復
+    document.getElementById("content").style.overflowY = isOpening ? "hidden" : "auto";
+}
+
+function closeMenu() { 
+    document.getElementById("sidebar").classList.remove("open"); 
+    document.getElementById("content").style.overflowY = "auto";
 }
 
 // ---------------- 系統設定與分類 ----------------
