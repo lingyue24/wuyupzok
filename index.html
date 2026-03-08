@@ -47,18 +47,24 @@
             <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
 
             <div class="editor-form">
-                <label>📌 內容標題</label>
-                <input type="text" id="edit-title" placeholder="請輸入標題...">
+                <div class="form-group">
+                    <label>📌 內容標題</label>
+                    <input type="text" id="edit-title" placeholder="請輸入標題...">
+                </div>
                 
-                <label>📝 詳細描述</label>
-                <textarea id="edit-desc" placeholder="請輸入詳細內容說明..."></textarea>
+                <div class="form-group">
+                    <label>📝 資訊內容</label>
+                    <textarea id="edit-desc" placeholder="請輸入詳細內容說明..." rows="10"></textarea>
+                </div>
                 
-                <label>🖼 圖片管理 (最多5張)</label>
-                <div class="image-input-area">
-                    <input type="file" id="input-file" accept="image/*" onchange="addLocalImg(this)">
-                    <div class="url-input-group" style="display:flex; gap:5px; margin-top:5px;">
-                        <input type="text" id="input-url" placeholder="輸入圖片網址..." style="flex:1;">
-                        <button class="btn btn-outline" onclick="addUrlImg()">新增</button>
+                <div class="form-group">
+                    <label>🖼 圖片管理 (最多5張)</label>
+                    <div class="image-input-area">
+                        <input type="file" id="input-file" accept="image/*" onchange="addLocalImg(this)">
+                        <div class="url-input-group" style="display:flex; gap:5px; margin-top:5px;">
+                            <input type="text" id="input-url" placeholder="輸入圖片網址..." style="flex:1;">
+                            <button class="btn btn-outline" onclick="addUrlImg()">新增</button>
+                        </div>
                     </div>
                 </div>
                 <div id="img-manager-zone" class="img-manager"></div>
