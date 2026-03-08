@@ -11,9 +11,23 @@ let isAdmin = false;
 
 const save = () => localStorage.setItem("v6_knowledge_db", JSON.stringify(db));
 
-// --- 側邊欄與導航控制 ---
-const toggleMenu = () => document.getElementById("sidebar").classList.toggle("open");
-const closeMenu = () => document.getElementById("sidebar").classList.remove("open");
+// --- 側邊欄與導航控制 (強化收回邏輯) ---
+const toggleMenu = () => {
+    const sb = document.getElementById("sidebar");
+    sb.classList.toggle("open");
+};
+
+const closeMenu = () => {
+    document.getElementById("sidebar").classList.remove("open");
+};
+
+// 監聽側邊欄點擊事件：如果不是點擊管理按鈕，點擊內部其它地方也收回 (僅限手機版)
+document.getElementById("sidebar").addEventListener("click", (e) => {
+    if (window.innerWidth <= 1024 && e.target.id !== "admin-toggle") {
+        // 稍微延遲收回，讓點擊效果能被看見
+        setTimeout(closeMenu, 150);
+    }
+});
 
 // 管理模式開關
 function toggleAdmin() {
@@ -52,9 +66,10 @@ function exitEdit() {
     
     // 強制重置捲動座標，確保 Header 可見
     setTimeout(() => {
-        document.getElementById("content").scrollTop = 0;
-        window.scrollTo(0, 0);
-    }, 50);
+        const contentArea = document.getElementById("content");
+        if(contentArea) contentArea.scrollTop = 0;
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }, 100);
 }
 
 function startEdit(idx) {
@@ -69,7 +84,7 @@ function startEdit(idx) {
     document.getElementById("btn-cancel-edit").style.display = "inline-block";
     
     // 捲動至編輯區域
-    document.getElementById("admin-panel").scrollIntoView({ behavior: 'smooth' });
+    document.getElementById("admin-panel").scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function saveContent() {
@@ -103,7 +118,8 @@ function renderTree(nodes, container) {
             activeNode = node;
             document.getElementById('current-path').innerText = `📍 目前定位：${node.name}`;
             renderDisplay(node.items || []);
-            // 點擊後強制關閉側邊欄
+            
+            // 點擊節點後立即執行收回
             if (window.innerWidth <= 1024) closeMenu();
         };
         container.appendChild(title);
@@ -191,7 +207,9 @@ function addLocalImg(input) {
     }
 }
 function renderImgManager() {
-    document.getElementById("img-manager-zone").innerHTML = tempImgs.map((img, idx) => `
+    const zone = document.getElementById("img-manager-zone");
+    if(!zone) return;
+    zone.innerHTML = tempImgs.map((img, idx) => `
         <div class="img-slot"><img src="${img}"><button onclick="tempImgs.splice(${idx},1);renderImgManager();" style="position:absolute; top:0; right:0; background:red; color:white; border:none; cursor:pointer;">×</button></div>`).join("");
 }
 
@@ -220,6 +238,7 @@ function importDB(input) {
 
 // 初始化
 window.onload = () => {
-    document.getElementById("db-name-display").innerText = db.config.dbName;
+    const nameDisplay = document.getElementById("db-name-display");
+    if(nameDisplay) nameDisplay.innerText = db.config.dbName;
     renderTree(db.categories, document.getElementById("nav-tree"));
 };
