@@ -31,7 +31,7 @@ function renderAfterLoad() {
     renderTree(db.categories, document.getElementById("nav-tree"));
 }
 
-// --- 2. 搜尋功能 (保留遞迴邏輯) ---
+// --- 2. 搜尋功能 ---
 function smartSearch() {
     const q = document.getElementById("search-bar").value.toLowerCase();
     if (!q) {
@@ -176,7 +176,6 @@ function exitEdit() {
     document.getElementById("btn-save-main").innerText = "💾 儲存並同步雲端";
 }
 
-// 修正 2：新增本機圖片上傳邏輯
 function uploadLocalImg(input) {
     const file = input.files[0];
     if (!file) return;
@@ -184,7 +183,7 @@ function uploadLocalImg(input) {
     reader.onload = (e) => {
         tempImgs.push(e.target.result);
         renderImgManager();
-        input.value = ""; // 重置 input 方便下次選擇
+        input.value = "";
     };
     reader.readAsDataURL(file);
 }
@@ -207,7 +206,7 @@ function renderImgManager() {
         </div>`).join("");
 }
 
-// --- 7. 分類操作補強 ---
+// --- 7. 分類操作 ---
 async function addRootCategory() {
     const name = prompt("總分類名稱:");
     if(name) { db.categories.push({name, children:[], items:[]}); renderAfterLoad(); await saveToCloud(); }
@@ -224,17 +223,26 @@ async function addCategory() {
     }
 }
 
-// 修正 1：補回刪除分類邏輯
+// 新增功能：修改分類名稱 (自動回填標題)
+async function renameCategory() {
+    if(!activeNode) return alert("請選取要修改的分類");
+    // 自動回填當前分類名稱作為預設值
+    const newName = prompt(`請輸入「${activeNode.name}」的新名稱:`, activeNode.name);
+    if(newName && newName !== activeNode.name) {
+        activeNode.name = newName;
+        document.getElementById('current-path').innerText = `📍 定位：${activeNode.name}`;
+        renderAfterLoad();
+        await saveToCloud();
+    }
+}
+
 async function deleteCategory() {
     if(!activeNode) return alert("請選取要刪除的分類");
-    if(!confirm(`確定要刪除分類「${activeNode.name}」及其所有內容嗎？此操作無法復原。`)) return;
+    if(!confirm(`確定要刪除分類「${activeNode.name}」及其所有內容嗎？`)) return;
     
     const removeNode = (list) => {
         for (let i = 0; i < list.length; i++) {
-            if (list[i] === activeNode) {
-                list.splice(i, 1);
-                return true;
-            }
+            if (list[i] === activeNode) { list.splice(i, 1); return true; }
             if (list[i].children && removeNode(list[i].children)) return true;
         }
         return false;
@@ -275,7 +283,6 @@ function importDB(input) {
 }
 
 const openModal = () => {
-    // 修正 4：回填資料庫名稱
     document.getElementById("set-db-name").value = db.config.dbName || "";
     document.getElementById("settings-modal").style.display = "flex";
 };
